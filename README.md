@@ -4,7 +4,7 @@ Adding autonomous capabilities to a inexpensive quadcopter by:
 1) Reverse engineering the communications between the drone and it's controller to control it from a personal computer.
 2) Learning the rigid-body dynamics of the quadcopter.
 3) Learning to estimate motion and depth from monocular image sequences.
-4) Path planning with the learned dynamics model in the depth image space.
+4) Path planning in the depth image space and controls using the learned dynamics model and MPPI.
 
 ## Drone Information
 Drone model: Holy Stone F180C
