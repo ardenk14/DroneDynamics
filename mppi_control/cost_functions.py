@@ -1,6 +1,6 @@
 import torch
 
-def free_pushing_cost_function(state, action):
+def free_drone_flight_cost_function(state, action):
     """
     Compute the state cost for MPPI on a setup without obstacles.
     :param state: torch tensor of shape (B, state_size)
