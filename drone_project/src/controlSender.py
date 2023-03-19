@@ -8,7 +8,7 @@
 '''
 import rospy
 from drone import Drone
-from std_msgs.msg import Int8MultiArray
+from std_msgs.msg import UInt8MultiArray
 from threading import Lock
 
 class drone_controller():
@@ -18,7 +18,7 @@ class drone_controller():
         self.drone = Drone()
         rospy.sleep(1)
         self.lock = Lock()
-        self.sub = rospy.Subscriber('/drone_commands', Int8MultiArray, self.send_cmd) 
+        self.sub = rospy.Subscriber('/drone_commands', UInt8MultiArray, self.send_cmd) 
         rospy.loginfo("Initialized")
         while True:
             self.lock.acquire()

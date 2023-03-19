@@ -1,0 +1,22 @@
+<launch>
+    <node 
+        name="drone_controls_init"
+        pkg="drone_project" 
+        type="imageGrabber.py"
+        output="screen"
+        required="True">
+    </node>
+    <node 
+        name="drone_controls_control"
+        pkg="drone_project" 
+        type="controller.py"
+        output="screen">
+    </node>
+    <node 
+        name="drone_controls_send"
+        pkg="drone_project" 
+        type="controlSender.py"
+        output="screen">
+    </node>
+
+</launch>

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 ''' imageGrabber.py
 
     This is a ros node for grabbing an image stream from
@@ -82,11 +82,11 @@ class imageGrabber():
                     frame = cv2.resize(frame, (w, h), interpolation=cv2.INTER_AREA)
                     frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
                     #cv2.imshow("im", frame)
-
                     img_msg = self.br.cv2_to_imgmsg(frame)
+                    img_msg.encoding = 'bgr8'
                     img_msg.header.stamp = rospy.Time.now()
-                    self.img_pub.publish(img_msg)
                     self.cam_info.header.stamp = img_msg.header.timestamp
+                    self.img_pub.publish(img_msg)
                     self.info_pub.publish(self.cam_info)
                     #print("CAM INFO PUBLISHED")
                     #if cv2.waitKey(1) & 0xFF == ord('q'):

@@ -20,8 +20,13 @@ joysticks = [pygame.joystick.Joystick(x) for x in range(pygame.joystick.get_coun
 print("JOYSTICKS: ", joysticks)
 while running:
     try:
-        fingers = tch.get_num_fingers(-1)
-        print("FINGERS: ", fingers)
+        #fingers = tch.get_num_fingers(-1)
+        #print("FINGERS: ", fingers)
+        #print("0: ", joysticks[0].get_axis(0))
+        #print("1: ", joysticks[0].get_axis(1))
+        #print("2: ", joysticks[0].get_axis(2))
+        #print("3: ", joysticks[0].get_axis(3))
+        print("5: ", joysticks[0].get_axis(0))
     except:
         pass
 
