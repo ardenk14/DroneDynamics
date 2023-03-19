@@ -52,6 +52,15 @@ class imageGrabber():
         rospy.loginfo('Camera stream initialized')        
         #self.pub = rospy.Publisher(topic_name, Int32, queue_size=10)
 
+        self.cam_info.height = 576
+        self.cam_info.width = 720
+        self.cam_info.distortion_model = "plumb_bob"
+        self.cam_info.D = [0.8337068337092105, -0.7296451172680306, 0.015187197230019187, 0.08793175446175946, 0.0]
+        self.cam_info.K = [1989.1574391172464, 0.0, 554.6150636910545, 0.0, 2068.7938072844036, 280.42584157479126, 0.0, 0.0, 1.0]
+        self.cam_info.R = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+        self.cam_info.P = [2012.7718505859375, 0.0, 562.0574733415124, 0.0, 0.0, 2135.0751953125, 281.9590617435897, 0.0, 0.0, 0.0, 1.0, 0.0]
+
+
 
     def run(self):
         BUFFER_SIZE = 1024
@@ -73,7 +82,11 @@ class imageGrabber():
                     frame = cv2.resize(frame, (w, h), interpolation=cv2.INTER_AREA)
                     frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
                     #cv2.imshow("im", frame)
-                    self.img_pub.publish(self.br.cv2_to_imgmsg(frame))
+
+                    img_msg = self.br.cv2_to_imgmsg(frame)
+                    img_msg.header.stamp = rospy.Time.now()
+                    self.img_pub.publish(img_msg)
+                    self.cam_info.header.stamp = img_msg.header.timestamp
                     self.info_pub.publish(self.cam_info)
                     #print("CAM INFO PUBLISHED")
                     #if cv2.waitKey(1) & 0xFF == ord('q'):
