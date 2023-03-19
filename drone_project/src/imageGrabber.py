@@ -85,7 +85,7 @@ class imageGrabber():
                     img_msg = self.br.cv2_to_imgmsg(frame)
                     img_msg.encoding = 'bgr8'
                     img_msg.header.stamp = rospy.Time.now()
-                    self.cam_info.header.stamp = img_msg.header.timestamp
+                    self.cam_info.header.stamp = img_msg.header.stamp
                     self.img_pub.publish(img_msg)
                     self.info_pub.publish(self.cam_info)
                     #print("CAM INFO PUBLISHED")
