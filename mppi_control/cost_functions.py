@@ -1,6 +1,6 @@
 import torch
 
-def free_pushing_cost_function(state, action):
+def free_flight_cost_function(state, action):
     """
     Compute the state cost for MPPI on a setup without obstacles.
     :param state: torch tensor of shape (B, state_size)
@@ -16,7 +16,7 @@ def free_pushing_cost_function(state, action):
     cost = torch.diagonal((state - target_pose) @ Q @ (state - target_pose).t())
     return cost
 
-def obstacle_avoidance_pushing_cost_function(state, action):
+def obstacle_avoidance_cost_function(state, action):
     """
     Compute the state cost for MPPI on a setup with obstacles.
     :param state: torch tensor of shape (B, state_size)
