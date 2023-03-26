@@ -7,7 +7,7 @@ Adding autonomous capabilities to a inexpensive quadcopter by:
 4) Path planning in the depth image space and controls using the learned dynamics model and MPPI.
 
 ## Drone Information
-Drone model: Holy Stone F180C
+Drone model: F180D
 
 This drone model may be discontinued, though some can be found for second-hand sale online. The methods used to gain control of this drone can likely be reproduced on other inexpensive hobby drones.
 
