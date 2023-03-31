@@ -18,11 +18,18 @@ class drone_controller():
         self.drone = Drone()
         rospy.sleep(1)
         self.lock = Lock()
+        self.last_cmd = None
         self.sub = rospy.Subscriber('/drone_commands', UInt8MultiArray, self.send_cmd) 
+        self.pub = rospy.Publisher('/sent_drone_commands', UInt8MultiArray, queue_size=1) 
+
         rospy.loginfo("Initialized")
         while True:
             self.lock.acquire()
+            #t = rospy.Time.now()
             self.drone.send()
+            if self.last_cmd is not None:
+                #self.last_cmd.header.stamp = t
+                self.pub.publish(self.last_cmd)
             #print("SENT")
             self.lock.release()
             rospy.sleep(0.002)
@@ -32,6 +39,7 @@ class drone_controller():
         cmd = msg.data # Size of list is 4: roll, pitch, thrust, yaw
         self.lock.acquire()
         self.drone.set_cmd(cmd)
+        self.last_cmd = msg
         self.lock.release()
         # Send command
         #self.drone.send()
