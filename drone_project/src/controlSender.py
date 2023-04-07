@@ -32,7 +32,7 @@ class drone_controller():
                 self.pub.publish(self.last_cmd)
             #print("SENT")
             self.lock.release()
-            rospy.sleep(0.002)
+            rospy.sleep(0.004)
 
     def send_cmd(self, msg):
         # Set drone state to match that of the last message
