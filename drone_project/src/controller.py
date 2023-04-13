@@ -85,7 +85,7 @@ class ps4_controller():
                 elif axis[i]==5:
                     MAX_RANGE = MAX_RANGE_THROTTLE
                     if self.setThrottle:
-                        MIN_RANGE = 170
+                        MIN_RANGE = 150
                     else:
                         MIN_RANGE = MIN_RANGE_THROTTLE
                 elif axis[i]==1:
