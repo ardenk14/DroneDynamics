@@ -48,13 +48,13 @@
 %% User inputs
 
 % Relative directory of calibration bagfile
-calibration_file = '/home/manav/catkin_ws/src/DroneDynamics/april_tags/calibration_g1.bag';%'data/calibration.bag';
+calibration_file = '/home/manav/catkin_ws/src/DroneDynamics/april_tags/calibration_g9.bag';%'data/calibration.bag';
 
 % Bundle name
-bundle_name = 'bundle1';
+bundle_name = 'bundle_gp9';
 
 % Master tag's ID
-master_id = 0;
+master_id = 87;
 
 %% Make sure matlab_rosbag is installed
 
