@@ -24,7 +24,7 @@ and interpolate values so each timepoint has both a
 Based on: http://wiki.ros.org/rosbag/Cookbook#Python
 
 # USAGE EXAMPLE:
-source devel/setup.bash  to get message definitions
+source devel_isolated/setup.bash  #to get apriltag message definitions
 python3 process_bagfile.py bagfile_directory
 python3 process_bagfile.py bagfile_directory bagfile_name1 bagfile_name2
 python3 process_bagfile.py ~/Downloads flight_4_12_bag2.bag
@@ -66,6 +66,23 @@ results_dir = directory + "bagfile_csvs" #+ filename[:-4]
 if not os.path.exists(results_dir):
   os.makedirs(results_dir)
 
+taggroup_dict = {
+  
+
+}
+def get_taggroup_global_coords(id, taggroup_dict):
+  """
+  @args 
+  id: list of all ids in this apriltag bundle
+  @ return
+  global_coord: global position of tag group in world frame [x,y,z,qx,qy,qz,qw]
+  """
+  global_coord = [0,0,0,0,0,0,0]
+
+
+  return global_coord
+  
+
 
 for filename in filenames:
   bag = rosbag.Bag(directory + filename)
@@ -90,16 +107,26 @@ for filename in filenames:
           d = message.data
           data_writer.writerow([timestamp, d[0], d[1], d[2], d[3], "", "", "", "", "", "", ""])
       elif topic=='/tag_detections' or topic=='tag_detections':
-          print(message.getmembers())
-        # geometry_msgs/PoseWithCovarianceStamped
-        #   std_msgs/Header header
-        #   geometry_msgs/PoseWithCovariance pose
-        #     float64[36] covariance
-        #     geometry_msgs/Pose pose
-        #       geometry_msgs/Point position
-        #       geometry_msgs/Quaternion orientation
-          pos = message.pose.pose.position
-          orient = message.pose.pose.orientation
+        # message contains an array of pose wrt each visible group
+        # AprilTagDetectionArray
+          # std_msgs/Header header
+          # AprilTagDetection[] detections
+            # int32[] id
+            # float64[] size
+            # geometry_msgs/PoseWithCovarianceStamped pose
+            #   std_msgs/Header header
+            #   geometry_msgs/PoseWithCovariance pose
+            #     float64[36] covariance
+            #     geometry_msgs/Pose pose
+            #       geometry_msgs/Point position
+            #       geometry_msgs/Quaternion orientation
+          try: 
+            pos = message.detections[0].pose.pose.position
+            orient = message.detections[0].pose.pose.orientation
+          except:
+            pos = message.pose.pose.position
+            orient = message.pose.pose.orientation
+          
           data_writer.writerow([timestamp, "", "", "", "",pos.x, pos.y, pos.z, orient.x, orient.y, orient.z, orient.w])
   bag.close()
   print(f"Wrote {csv_filepath}")
