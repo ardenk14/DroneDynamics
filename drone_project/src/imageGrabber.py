@@ -27,7 +27,6 @@ class imageGrabber():
         # Host and port
         HOST = '172.16.10.1' #'172.17.10.1'
         PORT = 8888
-
         # Setup socket
         self.s0 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         print("SOCKET OPEN")
@@ -94,6 +93,8 @@ class imageGrabber():
 
 if __name__ == '__main__':
     stream = imageGrabber()
+    
+    #stream.run()
     try:
         stream.run()
     except KeyboardInterrupt:
