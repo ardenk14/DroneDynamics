@@ -19,8 +19,8 @@ class infoPub():
 
     def __init__(self):
         rospy.init_node('image_stream', anonymous=False)   # Can have only one leader node
-        self.img_sub = rospy.Subscriber('/image_stream/image', Image, self.republish_info)
-        self.info_pub = rospy.Publisher('/image_stream/camera_info', CameraInfo,  queue_size=10)
+        self.img_sub = rospy.Subscriber('/image_stream/sharp_image', Image, self.republish_info)
+        self.info_pub = rospy.Publisher('/image_stream/sharp_camera_info', CameraInfo,  queue_size=10)
         self.br = CvBridge()
         self.cam_info = CameraInfo()
 
