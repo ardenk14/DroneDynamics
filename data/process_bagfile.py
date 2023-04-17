@@ -87,15 +87,18 @@ def get_taggroup_global_coords(id, taggroup_dict):
 
 for filename in filenames:
   bag = rosbag.Bag(directory + filename)
-  csv_filepath = results_dir +"/"+filename+'_commands_states.csv'
+  csv_filepath = results_dir +"/"+filename[:-4]+'_commands_states.csv'
   print(f"Writing tag_detections and sent_drone_commands in {filename} to CSV")
   
   with open(csv_filepath, mode='w') as data_file:
     data_writer = csv.writer(data_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
     data_writer.writerow(['time','commands[0]','commands[1]','commands[2]','commands[3]',"position.x", "position.y", "position.z", "orient.x", "orient.y", "orient.z", "orient.w"])
     #TODO: what are drone_commands [0],[1],etc?
-
+    t0 = -1
     for topic, message, timestamp in bag.read_messages(topics=['/sent_drone_commands', '/tag_detections']):
+      if t0 == -1:
+        t0 = timestamp
+      timestamp = (timestamp - t0) #convert to nanoseconds since bag start
       # print(f"topic: {topic}, time:{timestamp}")
       if topic=='/sent_drone_commands' or topic=='sent_drone_commands':
   #       /sent_drone_commands  std_msgs/UInt8MultiArray
@@ -117,19 +120,27 @@ for filename in filenames:
             #       geometry_msgs/Quaternion orientation
           try: 
             # assume we only have one tag group
-            pos = message.detections[0].pose.pose.position #leave as wall wrt drone
-            orient = message.detections[0].pose.pose.orientation
-          except:
-            pos = message.pose.pose.position
-            orient = message.pose.pose.orientation
+            # print(type(message.detections[0].pose.pose.pose.position))
+            pos = message.detections[0].pose.pose.pose.position 
+            orient = message.detections[0].pose.pose.pose.orientation
+            
+            # flip the vector so it represents pose wrt apriltags as opposed to apriltag pose wrt camera
+            # as_matrix was first added in scipy version 1.4.0 (specifically gh-10979). In 1.2.1 the same functionality is called as_dcm
+            pos.x = -1.0*pos.x
+            pos.y = -1.0*pos.y
+            pos.z = -1.0*pos.z
+            rotation = R.from_quat([orient.x, orient.y, orient.z, orient.w])
+            rotation_inv = rotation.inv()
+            orientation = rotation_inv.as_quat()
+            data_writer.writerow([timestamp, "", "", "", "",pos.x, pos.y, pos.z, orientation[0], orientation[1], orientation[2], orientation[3]])
+          
+          except IndexError:
+            # sometimes length of detections is 0
+            pass
+            # when there is only 1 group, is it a list?
+            # pos = message.pose.pose.pose.position
+            # orient = message.pose.pose.pose.orientation
 
-          # flip the vector so it represents pose wrt apriltags as opposed to apriltag pose wrt camera
-          # as_matrix was first added in scipy version 1.4.0 (specifically gh-10979). In 1.2.1 the same functionality is called as_dcm
-          pos = -1.0*pos
-          rotation = R.from_quat([orient.x, orient.y, orient.z, orient.w])
-          rotation_inv = rotation.inv()
-          orientation = rotation_inv.as_quat()
-          data_writer.writerow([timestamp, "", "", "", "",pos.x, pos.y, pos.z, orientation[0], orientation[1], orientation[2], orientation[3]])
           
           # data_writer.writerow([timestamp, "", "", "", "",pos.x, pos.y, pos.z, orient.x, orient.y, orient.z, orient.w])
   bag.close()
