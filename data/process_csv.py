@@ -14,7 +14,8 @@ python3 process_csv.py csv_directory csv_name1 csv_name2
 import sys
 import os
 import pandas as pd
-# import csv
+import numpy as np
+import quaternion as quat
 
 LARGE_TIMEGAP_THRESHHOLD = 0.1 # [s]
 
@@ -53,61 +54,58 @@ for filename in filenames:
     file_to_write = results_dir +"/processed_"+filename
     print("Adding velocity and interpolating the states in {file_to_write}")
 
-    # make dataframes containing only states and only commands
-    df_states = df[['time', 'position.x', 'position.y', 'position.z', 'orient.x', 'orient.y', 'orient.z', 'orient.w']]
-    df_commands = df[['time', 'commands[0]', 'commands[1]', 'commands[2]', 'commands[3]']]
+    # Add velocity columns 
+    # (angular velocity still in quaternion form)
+    # (change time from nanoseconds to seconds)
+    df['vel.x'] = df['position.x'].diff() / (df['time'].diff() * 1e-9)
+    df['vel.y'] = df['position.y'].diff() / (df['time'].diff() * 1e-9)
+    df['vel.z'] = df['position.z'].diff() / (df['time'].diff() * 1e-9)
+    df['ang_vel.x'] = df['orient.x'].diff() / (df['time'].diff() * 1e-9)
+    df['ang_vel.y'] = df['orient.y'].diff() / (df['time'].diff() * 1e-9)
+    df['ang_vel.z'] = df['orient.z'].diff() / (df['time'].diff() * 1e-9)
+    df['ang_vel.w'] = df['orient.w'].diff() / (df['time'].diff() * 1e-9)
+
+    # Add large_timegap_flag column
+    df['large_timegap_flag'] = df['time'].diff() > LARGE_TIMEGAP_THRESHHOLD * 1e9
+
+    # Interpolate the states to get a state for each command
+    # (commands are at faster rate than the states)
+    # At each command, fill in the states by interpolating (by time) between the previous and next state
+    # set the index to time
+    df = df.set_index('time')
+    df['position.x'] = df['position.x'].interpolate(method='index')
+    df['position.y'] = df['position.y'].interpolate(method='index')
+    df['position.z'] = df['position.z'].interpolate(method='index')
+    df['orient.x'] = df['orient.x'].interpolate(method='index')
+    df['orient.y'] = df['orient.y'].interpolate(method='index')
+    df['orient.z'] = df['orient.z'].interpolate(method='index')
+    df['orient.w'] = df['orient.w'].interpolate(method='index')
+    df['vel.x'] = df['vel.x'].interpolate(method='index')
+    df['vel.y'] = df['vel.y'].interpolate(method='index')
+    df['vel.z'] = df['vel.z'].interpolate(method='index')
+    df['ang_vel.x'] = df['ang_vel.x'].interpolate(method='index')
+    df['ang_vel.y'] = df['ang_vel.y'].interpolate(method='index')
+    df['ang_vel.z'] = df['ang_vel.z'].interpolate(method='index')
+    df['ang_vel.w'] = df['ang_vel.w'].interpolate(method='index')
+
+    # reset the index to be the row number
+    df = df.reset_index()
+
+    # convert quaternions to euler angles for orientation and angular velocity
+    euler_orient = np.zeros((df.shape[0], 3))
+    for i, row in df.iterrows():
+        q = quat.quaternion(row['qw_orientation'], row['qx_orientation'], row['qy_orientation'], row['qz_orientation'])
+        euler_orient[i] = quat.euler_angles(q, 'zyx')
+
+    euler_ang_vel = np.zeros((df.shape[0], 3))
+    for i, row in df.iterrows():
+        q = quat.quaternion(row['qw_ang_vel'], row['qx_ang_vel'], row['qy_ang_vel'], row['qz_ang_vel'])
+        euler_ang_vel[i] = quat.euler_angles(q, 'zyx')
     
-    # remove any rows that only contain a timestamp and no other data
-    # (keep these for states so interpolation can be done)
-    df_commands.set_index('time', inplace=True) # Set the index of the DataFrame to the 'time' column
-    for index, row in df_commands.iterrows():
-        if len(row.dropna()) <= 1:
-            df_commands.drop(index, inplace=True)
-    df_commands.reset_index(inplace=True) # Reset the index to make 'time' a column again
-
-
-    # go through and fill in all velocities for df_states
-    # interpolation is better done for quaternions, so keep in quaternion form
-    difference = df_states.diff()
-    vx_col = 
-    # treat this like excel where v[i][j] = p[i][j] - p[i][j-1]/t[j]
-
-
-    # interpolate the states to all commands
-    df_states.set_index('time', inplace=True) # Set the index of the DataFrame to the 'time' column
-    df_states.interpolate(method='time', inplace=True) # Interpolate the missing values
-    df_states.reset_index(inplace=True) # Reset the index to make 'time' a column again
-
-    # convert to euler angles
+    # Add Euler angles to dataframe
+    df[['roll', 'pitch', 'yaw']] = pd.DataFrame(euler_orient, index=df.index)
+    df[['ang_vel_roll', 'ang_vel_pitch', 'ang_vel_yaw']] = pd.DataFrame(euler_ang_vel, index=df.index)
 
     # Save the interpolated DataFrame back to a CSV file
-    df_commands.to_csv(file_to_write, index=False)
+    df.to_csv(file_to_write, index=False)
     print(f"Wrote {file_to_write}")
-
-
-
-# with open(file_to_write, mode='w') as write_file:
-#     with open(file_to_read, mode='r') as read_file:
-#         writer = csv.writer(write_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-#         reader = csv.reader(read_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-
-
-
-
-
-
-        
-#         for row in reader:
-#             if row[0].isalnum(): # row is header: 
-#                 # row = ['time','commands[0]','commands[1]','commands[2]','commands[3]',"position.x", "position.y", "position.z", "orient.x", "orient.y", "orient.z", "orient.w"]
-#                 new_row = row + ['vel.x','vel.y','vel.z','ang_vel.x','ang_vel.y', 'ang_vel.z', 'large_timegap_flag']
-#                 writer.writerow(new_row)
-#             else: # row is data
-#                 # 
-#                 t = row[0] / 1e9 #[s] (time is originally in microseconds since some arbitrary start point)
-
-#                 if row[5] == "": #this was a command message
-#                     # go back in the file to get 
-#                     pass
-
-#                 writer.writerow(row)
