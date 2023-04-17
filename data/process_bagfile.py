@@ -34,6 +34,7 @@ import sys
 import os
 import csv
 import rosbag
+from scipy.spatial.transform import Rotation as R
 
 # get bagfile directory
 directory = sys.argv[1]
@@ -121,8 +122,16 @@ for filename in filenames:
           except:
             pos = message.pose.pose.position
             orient = message.pose.pose.orientation
+
+          # flip the vector so it represents pose wrt apriltags as opposed to apriltag pose wrt camera
+          # as_matrix was first added in scipy version 1.4.0 (specifically gh-10979). In 1.2.1 the same functionality is called as_dcm
+          pos = -1.0*pos
+          rotation = R.from_quat([orient.x, orient.y, orient.z, orient.w])
+          rotation_inv = rotation.inv()
+          orientation = rotation_inv.as_quat()
+          data_writer.writerow([timestamp, "", "", "", "",pos.x, pos.y, pos.z, orientation[0], orientation[1], orientation[2], orientation[3]])
           
-          data_writer.writerow([timestamp, "", "", "", "",pos.x, pos.y, pos.z, orient.x, orient.y, orient.z, orient.w])
+          # data_writer.writerow([timestamp, "", "", "", "",pos.x, pos.y, pos.z, orient.x, orient.y, orient.z, orient.w])
   bag.close()
   print(f"Wrote {csv_filepath}")
 

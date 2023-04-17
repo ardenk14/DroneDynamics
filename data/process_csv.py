@@ -15,7 +15,8 @@ import sys
 import os
 import pandas as pd
 import numpy as np
-import quaternion as quat
+from scipy.spatial.transform import Rotation as R
+# import quaternion as quat
 
 LARGE_TIMEGAP_THRESHHOLD = 0.1 # [s]
 
@@ -93,14 +94,18 @@ for filename in filenames:
 
     # convert quaternions to euler angles for orientation and angular velocity
     euler_orient = np.zeros((df.shape[0], 3))
-    for i, row in df.iterrows():
-        q = quat.quaternion(row['qw_orientation'], row['qx_orientation'], row['qy_orientation'], row['qz_orientation'])
-        euler_orient[i] = quat.euler_angles(q, 'zyx')
+    q = R.from_quat([df['qw_orientation'], df['qx_orientation'], df['qy_orientation'], df['qz_orientation']])
+    euler_orient = q.as_euler('xyz') # yaw (Body-Z), pitch (Body-Y), rolls (Body-X) in the air
+    # for i, row in df.iterrows():
+    #     q = R.from_quat(row['qw_orientation'], row['qx_orientation'], row['qy_orientation'], row['qz_orientation'])
+    #     euler_orient[i] = quat.euler_angles(q, 'xyz')
 
     euler_ang_vel = np.zeros((df.shape[0], 3))
-    for i, row in df.iterrows():
-        q = quat.quaternion(row['qw_ang_vel'], row['qx_ang_vel'], row['qy_ang_vel'], row['qz_ang_vel'])
-        euler_ang_vel[i] = quat.euler_angles(q, 'zyx')
+    q2 = R.from_quat([df['qw_ang_vel'], df['qx_ang_vel'], df['qy_ang_vel'], df['qz_ang_vel']])
+    euler_ang_vel = q2.as_euler('xyz')
+    # for i, row in df.iterrows():
+    #     q = quat.quaternion(row['qw_ang_vel'], row['qx_ang_vel'], row['qy_ang_vel'], row['qz_ang_vel'])
+    #     euler_ang_vel[i] = quat.euler_angles(q, 'xyz')
     
     # Add Euler angles to dataframe
     df[['roll', 'pitch', 'yaw']] = pd.DataFrame(euler_orient, index=df.index)
