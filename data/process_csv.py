@@ -8,6 +8,7 @@ Process a csv file containing April tag detections and states (position/orientat
 # USAGE EXAMPLE:
 python3 process_csv.py csv_directory
 python3 process_csv.py csv_directory csv_name1 csv_name2
+python3 process_csv.py ~/Downloads/bagfile_csvs
 """
 
 import sys

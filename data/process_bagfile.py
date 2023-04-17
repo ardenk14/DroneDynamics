@@ -27,7 +27,7 @@ Based on: http://wiki.ros.org/rosbag/Cookbook#Python
 source devel_isolated/setup.bash  #to get apriltag message definitions
 python3 process_bagfile.py bagfile_directory
 python3 process_bagfile.py bagfile_directory bagfile_name1 bagfile_name2
-python3 process_bagfile.py ~/Downloads flight_4_12_bag2.bag
+python3 process_bagfile.py ~/Downloads
 """
 
 import sys
@@ -36,6 +36,7 @@ import csv
 import rosbag
 from scipy.spatial.transform import Rotation as R
 
+OUTLIER_POSITION_THRESHHOLD = 10.0 #[m] from origin
 # get bagfile directory
 directory = sys.argv[1]
 if not directory.endswith("/"):
@@ -132,7 +133,10 @@ for filename in filenames:
             rotation = R.from_quat([orient.x, orient.y, orient.z, orient.w])
             rotation_inv = rotation.inv()
             orientation = rotation_inv.as_quat()
-            data_writer.writerow([timestamp, "", "", "", "",pos.x, pos.y, pos.z, orientation[0], orientation[1], orientation[2], orientation[3]])
+
+            # filter outliers:
+            if (pos.x**2 + pos.y**2 + pos.z**2 < OUTLIER_POSITION_THRESHHOLD**2):
+              data_writer.writerow([timestamp, "", "", "", "",pos.x, pos.y, pos.z, orientation[0], orientation[1], orientation[2], orientation[3]])
           
           except IndexError:
             # sometimes length of detections is 0
