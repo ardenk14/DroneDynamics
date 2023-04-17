@@ -49,8 +49,8 @@ if not os.path.exists(results_dir):
   os.makedirs(results_dir)
 
 for filename in filenames:
-    df = pd.read_csv(file_to_read)
-    file_to_write = results_dir +"/processed_"+filename+extension
+    df = pd.read_csv(filename)
+    file_to_write = results_dir +"/processed_"+filename
     print("Adding velocity and interpolating the states in {file_to_write}")
 
     # make dataframes containing only states and only commands

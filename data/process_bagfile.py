@@ -94,12 +94,6 @@ for filename in filenames:
     data_writer.writerow(['time','commands[0]','commands[1]','commands[2]','commands[3]',"position.x", "position.y", "position.z", "orient.x", "orient.y", "orient.z", "orient.w"])
     #TODO: what are drone_commands [0],[1],etc?
 
-          # @param topics: list of topics or a single topic. if an empty list is given all topics will be read [optional]
-          # @type  topics: list(str) or str
-          # @param start_time: earliest timestamp of message to return [optional]
-          # @type  start_time: U{genpy.Time}
-          # @param end_time: latest timestamp of message to return [optional]
-          # @type  end_time: U{genpy.Time}
     for topic, message, timestamp in bag.read_messages(topics=['/sent_drone_commands', '/tag_detections']):
       # print(f"topic: {topic}, time:{timestamp}")
       if topic=='/sent_drone_commands' or topic=='sent_drone_commands':
@@ -121,7 +115,8 @@ for filename in filenames:
             #       geometry_msgs/Point position
             #       geometry_msgs/Quaternion orientation
           try: 
-            pos = message.detections[0].pose.pose.position
+            # assume we only have one tag group
+            pos = message.detections[0].pose.pose.position #leave as wall wrt drone
             orient = message.detections[0].pose.pose.orientation
           except:
             pos = message.pose.pose.position
@@ -130,6 +125,16 @@ for filename in filenames:
           data_writer.writerow([timestamp, "", "", "", "",pos.x, pos.y, pos.z, orient.x, orient.y, orient.z, orient.w])
   bag.close()
   print(f"Wrote {csv_filepath}")
+
+
+
+# parameters for writerow function:
+            # @param topics: list of topics or a single topic. if an empty list is given all topics will be read [optional]
+          # @type  topics: list(str) or str
+          # @param start_time: earliest timestamp of message to return [optional]
+          # @type  start_time: U{genpy.Time}
+          # @param end_time: latest timestamp of message to return [optional]
+          # @type  end_time: U{genpy.Time}
 
 
 
