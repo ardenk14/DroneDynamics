@@ -7,7 +7,7 @@ plot the tags.yaml file in 3D to make sure it corresponds to the real life posit
 """
 
 def check_tags_yaml():
-    with open('tags_all_bundles.yaml', 'r') as f:
+    with open('tags_right_wall.yaml', 'r') as f:
         data = yaml.safe_load(f)
 
     # Extract x,y,z location for each id number and plot it
@@ -15,7 +15,7 @@ def check_tags_yaml():
         fig = plt.figure()
         ax = fig.add_subplot(projection='3d')
         for tag in bundle['layout']:
-            fig.title(bundle['name'])
+            # fig.title(bundle['name'])
             id_num = tag['id']
             x = tag['x']
             y = tag['y']

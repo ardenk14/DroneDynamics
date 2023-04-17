@@ -1,6 +1,5 @@
-# import check_tags_yaml
+import check_tags_yaml
 from scipy.spatial.transform import Rotation as R
-# import yaml
 
 """
 Create a tags.yaml file for the tags in our test space
@@ -11,7 +10,8 @@ NUM_SHEETS_RIGHT_WALL_X = 4
 NUM_SHEETS_RIGHT_WALL_Y = 4
 NUM_TAGS_XAXIS_6GROUP = 3
 NUM_TAGS_YAXIS_6GROUP = 2
-TAG_SPACING_WITHIN_6GROUP = 0.5 # meters
+TAG_SPACING_WITHIN_6GROUP = 0.25 # meters
+SHEET_SPACING = 1.5
 
 # key: lowest tag id in group, value: location of lowest tag in group
 # x is horizontal, y is vertical, z is depth (assumed to be the same)
@@ -41,8 +41,8 @@ def generate_tag_locations():
     Generate the (fake) locations of all the tags in the test space
     """
     for i in range(NUM_SHEETS_RIGHT_WALL_X*NUM_SHEETS_RIGHT_WALL_Y):
-        x = i % NUM_SHEETS_RIGHT_WALL_X
-        y = i // NUM_SHEETS_RIGHT_WALL_Y
+        x = (i % NUM_SHEETS_RIGHT_WALL_X) * SHEET_SPACING
+        y = (i // NUM_SHEETS_RIGHT_WALL_Y) * SHEET_SPACING
         group_locations_dict[i*6] = [x,y,0]
 
 
@@ -180,7 +180,7 @@ def generate_tags_yaml():
             f.write(f"{tag_group_str},\n")
 
         # delete the last comma and newline
-        f.seek(f.tell() - 3, 0)
+        f.seek(f.tell() - 2, 0)
         f.truncate()
 
         # write the footer
@@ -191,4 +191,4 @@ def generate_tags_yaml():
 if __name__ == "__main__":
     generate_tag_locations()
     generate_tags_yaml()
-    # check_tags_yaml.check_tags_yaml(YAML_FILE_NAME)
+    check_tags_yaml.check_tags_yaml(YAML_FILE_NAME)
