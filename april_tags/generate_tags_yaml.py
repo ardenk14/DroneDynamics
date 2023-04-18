@@ -12,27 +12,32 @@ NUM_TAGS_XAXIS_6GROUP = 3
 NUM_TAGS_YAXIS_6GROUP = 2
 TAG_SPACING_WITHIN_6GROUP = 0.25 # meters
 SHEET_SPACING = 1.5
-
+INCH_TO_METERS = 0.0254
 # key: lowest tag id in group, value: location of lowest tag in group
 # x is horizontal, y is vertical, z is depth (assumed to be the same)
+
 group_locations_dict = {
     0:  [0,0],
-    12: [0,0],
-    18: [0,0],
-    24: [0,0],
-    30: [0,0],
-    36: [0,0],
-    42: [0,0],
-    48: [0,0],
-    54: [0,0],
-    60: [0,0],
-    66: [0,0],
-    72: [0,0],
-    78: [0,0],
-    84: [0,0],
-    90: [0,0],
-    96: [0,0]
+    12: [0,24],
+    18: [0,47.5],
+    24: [0,69.75],
+    30: [22.25,0],
+    36: [22.25,69.35],
+    42: [22.25,47.25],
+    48: [22.25,23],
+    54: [-18.5,0],
+    60: [-18.5,24],
+    66: [-17.5,46.75],
+    72: [-18.1,68.5],
+    78: [-36,0],
+    84: [-35.5,23.5],
+    90: [-35,47.0],
+    96: [-35.5,68.6]
 }
+for i in group_locations_dict.keys():
+    group_locations_dict[i] = [
+        group_locations_dict[i][0]*INCH_TO_METERS,
+        group_locations_dict[i][1]*INCH_TO_METERS]
 
 # while I don't have the actual tag locations, 
 # I'm going to assume that the tag sheets are evenly spaced
@@ -189,6 +194,7 @@ def generate_tags_yaml():
         print(f"Successfully generated {YAML_FILE_NAME}")
 
 if __name__ == "__main__":
-    generate_tag_locations()
+    #generate_tag_locations()
     generate_tags_yaml()
-    check_tags_yaml.check_tags_yaml(YAML_FILE_NAME)
+    check_tags_yaml.check_tags_yaml()
+    #check_tags_yaml.check_tags_yaml(YAML_FILE_NAME)
