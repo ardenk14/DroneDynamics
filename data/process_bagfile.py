@@ -68,22 +68,17 @@ results_dir = directory + "bagfile_csvs" #+ filename[:-4]
 if not os.path.exists(results_dir):
   os.makedirs(results_dir)
 
+# keys: list of all ids in the tag group
+# values: [x,y,z,qx,qy,qz,qw] list of Global position wrt. tag with id 0
 taggroup_dict = {
-  
-
+  [0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 
+  25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 
+  43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 
+  61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 
+  79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 
+  97, 98, 99, 100, 101] : [0,0,0,0,0,0,1]
 }
-def get_taggroup_global_coords(id, taggroup_dict):
-  """
-  @args 
-  id: list of all ids in this apriltag bundle
-  @ return
-  global_coord: global position of tag group in world frame [x,y,z,qx,qy,qz,qw]
-  """
-  global_coord = [0,0,0,0,0,0,0]
 
-
-  return global_coord
-  
 
 
 for filename in filenames:
@@ -119,6 +114,24 @@ for filename in filenames:
             #     geometry_msgs/Pose pose
             #       geometry_msgs/Point position
             #       geometry_msgs/Quaternion orientation
+
+          # state_estimates = [] # each row is the [x,y,z,qx,qy,qx,qw] state estimate from one group
+          # for group in message.detections:
+          #   group_global_coords = taggroup_dict[group.id]
+          #   pos = group.pose.pose.pose.position
+          #   orient = group.pose.pose.pose.orientation
+
+          #   # flip the vector so it represents pose wrt apriltags as opposed to apriltag pose wrt camera
+          #   pos.x = -1.0*pos.x
+          #   pos.y = -1.0*pos.y
+          #   pos.z = -1.0*pos.z
+          #   rotation = R.from_quat([orient.x, orient.y, orient.z, orient.w])
+          #   rotation_inv = rotation.inv()
+          #   orientation = rotation_inv.as_quat()
+          #   state_estimates.append([pos.x, pos.y, pos.z, orientation[0], orientation[1], orientation[2], orientation[3]])
+
+          # filter outliers: take the average of the three groups that are closest together
+
           try: 
             # assume we only have one tag group
             # print(type(message.detections[0].pose.pose.pose.position))
