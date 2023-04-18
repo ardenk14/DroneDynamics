@@ -74,12 +74,18 @@ if not os.path.exists(results_dir):
 # keys: list of all ids in the tag group
 # values: [x,y,z,qx,qy,qz,qw] list of Global position wrt. tag with id 0
 taggroup_dict = {
-  [0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 
+  (0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 
   25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 
   43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 
   61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 
   79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 
-  97, 98, 99, 100, 101] : [0,0,0,0,0,0,1]
+  97, 98, 99, 100, 101) : [0,0,0,0,0,0,1],
+  (0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 
+  25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 
+  43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 
+  61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 
+  79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 
+  97, 98, 99, 100, 101, 6, 7, 8, 9, 10, 11) : [0,0,0,0,0,0,1],
 }
 
 
@@ -118,38 +124,72 @@ for filename in filenames:
             #       geometry_msgs/Point position
             #       geometry_msgs/Quaternion orientation
 
+          # # TODO: Position is messed up and not sure what matrix multiplication to do on line 163
           state_estimates = np.array([]) # each row is the [x,y,z,qx,qy,qx,qw] state estimate from one group
           for group in message.detections:
             # get arrays from message container
-            group_global_pos = np.array(taggroup_dict[group.id])[:3]
-            group_global_orient = np.array(taggroup_dict[group.id])[3:]
+            group_global_pos = np.array(taggroup_dict[tuple(group.id)])[:3]
+            group_global_orient = np.array(taggroup_dict[tuple(group.id)])[3:]
             pos = group.pose.pose.pose.position
             orient = group.pose.pose.pose.orientation
 
-            # convert to global coordinates (use SE3 transforms)
+            # filter outliers
+            if (pos.x**2 + pos.y**2 + pos.z**2 > OUTLIER_POSITION_THRESHHOLD**2):
+              continue
+            #### convert to global coordinates (use SE3 transforms)
             pos_ = np.array([pos.x, pos.y, pos.z])
             orient_ = np.array([orient.x, orient.y, orient.z, orient.w])
-            # get SE3 matrix of the tag group wrt the drone
-            rotation_matrix = tft.quaternion_matrix(orient_)
-            gp_wrt_drone = np.identity(4)
-            gp_wrt_drone[:3,:3] = rotation_matrix[:3,:3]
-            gp_wrt_drone[:3,3] = pos_
-            # get SE3 matrix of the drone wrt the tag group
-            drone_wrt_gp = np.linalg.inv(gp_wrt_drone)
-            # get SE3 matrix of the tag group wrt the global frame
-            rotation_matrix = tft.quaternion_matrix(group_global_orient)
-            gp_wrt_global = np.identity(4)
-            gp_wrt_global[:3,:3] = rotation_matrix[:3,:3]
-            gp_wrt_global[:3,3] = group_global_pos
-            # get SE3 matrix of the drone wrt the global frame
-            drone_wrt_global = np.matmul(drone_wrt_gp, gp_wrt_global) # flipped? TODO: CHECK THIS!
             
-            # add position and (quaternion) orientation to state_estimates
-            pos = drone_wrt_global[:3,3]
-            orientation = tft.quaternion_from_matrix(drone_wrt_global[:3,:3])
-            state_estimates.append(pos + orientation)
+            pos_drone_wrt_global = group_global_pos - pos_
+     
+            rotation_gp_wrt_drone = R.from_quat(orient_)
+            rotation_drone_wrt_gp = rotation_gp_wrt_drone.inv()
+            rotation_gp_wrt_global = R.from_quat(group_global_orient)
+            rotation_drone_wrt_global = rotation_drone_wrt_gp * rotation_gp_wrt_global
+            orient_drone_wrt_global = rotation_drone_wrt_global.as_quat()
 
-          if len(state_estimates) != 0:
+            state = np.concatenate((pos_drone_wrt_global, orient_drone_wrt_global))
+          #   # get SE3 matrix of the tag group wrt the drone
+          #   rotation = R.from_quat([orient.x, orient.y, orient.z, orient.w])
+          #   rotation_matrix = rotation.as_dcm()
+          #   # rotation_matrix = tft.quaternion_matrix(orient_)
+          #   gp_wrt_drone = np.identity(4)
+          #   gp_wrt_drone[:3,:3] = rotation_matrix[:3,:3]
+          #   gp_wrt_drone[:3,3] = pos_
+            
+          #   # get SE3 matrix of the drone wrt the tag group
+          #   drone_wrt_gp = np.linalg.inv(gp_wrt_drone)
+            
+          #   # get SE3 matrix of the tag group wrt the global frame
+          #   rotation = R.from_quat(group_global_orient)
+          #   rotation_matrix = rotation.as_dcm() # as_matrix was first added in scipy version 1.4.0 (specifically gh-10979). In 1.2.1 the same functionality is called as_dcm
+          #   # rotation_matrix = tft.quaternion_matrix(group_global_orient)
+          #   gp_wrt_global = np.identity(4)
+          #   gp_wrt_global[:3,:3] = rotation_matrix[:3,:3]
+          #   gp_wrt_global[:3,3] = group_global_pos
+            
+          #   # get SE3 matrix of the drone wrt the global frame
+          #   drone_wrt_global = np.matmul(drone_wrt_gp, gp_wrt_global)#(gp_wrt_global, drone_wrt_gp)# # flipped? TODO: CHECK THIS!
+            
+          #   # add position and (quaternion) orientation to state_estimates
+          #   pos = drone_wrt_global[:3,3]
+          #   orientation_matrix = drone_wrt_global[:3,:3]
+          #   rotation = R.from_dcm(orientation_matrix) # as_matrix was first added in scipy version 1.4.0 (specifically gh-10979). In 1.2.1 the same functionality is called as_dcm
+          #   orientation = R.as_quat(rotation)
+          #   # orientation = tft.quaternion_from_matrix(orientation_matrix)
+            
+          #   state = np.concatenate((pos, orientation))
+
+            if len(state_estimates) == 0:
+              state_estimates = np.expand_dims(state,0)
+            else:
+              state_estimates = np.concatenate((state_estimates, state), axis=0)
+          
+          if len(state_estimates) == 0: continue
+          elif len(state_estimates[:,0]) == 1:
+            avg = state_estimates[0,:]
+            data_writer.writerow([timestamp, "", "", "", "", avg[0], avg[1], avg[2], avg[3], avg[4], avg[5], avg[6]])
+          elif len(state_estimates[:,0]) > 1:
             # filter outliers: 
             # find the average and sd of all tag groups
             avg = np.mean(state_estimates, axis=0)
