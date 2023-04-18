@@ -10,7 +10,7 @@ NUM_SHEETS_RIGHT_WALL_X = 4
 NUM_SHEETS_RIGHT_WALL_Y = 4
 NUM_TAGS_XAXIS_6GROUP = 3
 NUM_TAGS_YAXIS_6GROUP = 2
-TAG_SPACING_WITHIN_6GROUP = 0.25 # meters
+TAG_SPACING_WITHIN_6GROUP = 0.0877 # meters
 SHEET_SPACING = 1.5
 INCH_TO_METERS = 0.0254
 # key: lowest tag id in group, value: location of lowest tag in group
@@ -34,6 +34,7 @@ group_locations_dict = {
     90: [-35,47.0],
     96: [-35.5,68.6]
 }
+# convert fron inches to meters
 for i in group_locations_dict.keys():
     group_locations_dict[i] = [
         group_locations_dict[i][0]*INCH_TO_METERS,
@@ -41,7 +42,7 @@ for i in group_locations_dict.keys():
 
 # while I don't have the actual tag locations, 
 # I'm going to assume that the tag sheets are evenly spaced
-def generate_tag_locations():
+def generate_fake_tag_locations():
     """
     Generate the (fake) locations of all the tags in the test space
     """
@@ -194,7 +195,7 @@ def generate_tags_yaml():
         print(f"Successfully generated {YAML_FILE_NAME}")
 
 if __name__ == "__main__":
-    #generate_tag_locations()
+    #generate_fake_tag_locations()
     generate_tags_yaml()
     check_tags_yaml.check_tags_yaml()
     #check_tags_yaml.check_tags_yaml(YAML_FILE_NAME)
