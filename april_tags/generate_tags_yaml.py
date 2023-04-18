@@ -6,16 +6,18 @@ Create a tags.yaml file for the tags in our test space
 """
 # YAML_FILE_DIR = r"C:\Users\arthu\OneDrive\Documents\Classwork\ROB498_Robot_Learning_for_Planning_and_Control\project\DroneDynamics\april_tags"
 YAML_FILE_NAME = "./tags_right_wall.yaml"
+TAG_SPACING_WITHIN_6GROUP = 0.0877 # meters
+INCH_TO_METERS = 0.0254
+
+# for fake generation
 NUM_SHEETS_RIGHT_WALL_X = 4
 NUM_SHEETS_RIGHT_WALL_Y = 4
 NUM_TAGS_XAXIS_6GROUP = 3
 NUM_TAGS_YAXIS_6GROUP = 2
-TAG_SPACING_WITHIN_6GROUP = 0.0877 # meters
 SHEET_SPACING = 1.5
-INCH_TO_METERS = 0.0254
+
 # key: lowest tag id in group, value: location of lowest tag in group
 # x is horizontal, y is vertical, z is depth (assumed to be the same)
-
 group_locations_dict = {
     0:  [0,0],
     12: [0,24],

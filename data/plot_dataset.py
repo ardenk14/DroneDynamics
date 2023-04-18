@@ -10,7 +10,7 @@ usage: first change filename to plot
 python3 plot_dataset.py
 """
 # CSV_FILENAME = "/home/niksridhar/Downloads/processed_csvs/processed_tags1_distorted_commands_states.csv"
-CSV_FILENAME = "/home/niksridhar/Downloads/processed_csvs/processed_tags1_commands_states.csv"
+CSV_FILENAME = "/home/niksridhar/Downloads/processed_csvs/processed_tags2_right_wall_commands_states.csv"
 
 def plot_trajectory(filename, index_limit=None):
     df = pd.read_csv(filename)
