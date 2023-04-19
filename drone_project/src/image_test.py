@@ -60,11 +60,11 @@ class image_test():
             self.frame = cv2.undistort(self.frame, self.K, self.D, None, newcameramtx)
 
 
-            pred = self.frame
-            '''img = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
+            #pred = self.frame
+            img = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
 
             pred = self.predictor(img, None)
-            pred = cv2.cvtColor(pred, cv2.COLOR_RGB2BGR)'''
+            pred = cv2.cvtColor(pred, cv2.COLOR_RGB2BGR)
 
 
             """hsv = cv2.cvtColor(self.frame, cv2.COLOR_BGR2HSV)
