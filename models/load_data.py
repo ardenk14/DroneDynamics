@@ -5,7 +5,7 @@ import numpy as np
 def get_dataloader_drone_multi_step(data_filepath, batch_size=500, train_test=[0.8,0.2]):
     """
     """
-    d_set = DroneMultiStepDynamicsDataset(data_filepath)
+    d_set = DroneMultiStepDynamicsDataset(data_filepath, 2000)
 
     train, val = random_split(d_set, train_test)
     
@@ -66,6 +66,7 @@ class DroneMultiStepDynamicsDataset(Dataset):
 
         self.action_dim = self.data[0]['actions'].shape[1]
         self.state_dim = self.data[0]['states'].shape[1]
+        print("DATA SIZE: ", self.data)
 
     def __len__(self):
         return len(self.data) * (self.trajectory_length)
@@ -221,3 +222,7 @@ if __name__ == "__main__":
     print("first state: ", first_data["state"])
     print("first action trajectory: ", first_data["action"])
     print("first next_state trajectory", first_data['next_state'])
+
+    train, val = get_dataloader_drone_multi_step([data_filepath], batch_size=16, train_test=[0.8,0.2])
+    for batch_idx, data in enumerate(train):
+        print("BATCH ID: ", batch_idx)

@@ -17,9 +17,10 @@ def train_step(model, train_loader, optimizer, loss_fcn) -> float:
         Loss needs to be MSE loss.
     """
     train_loss = 0. 
-
+    print("CCCCCCCCCCCCCCCCC")
     for batch_idx, data in enumerate(train_loader):
         optimizer.zero_grad()
+        print("BATCH ID: ", batch_idx)
         
         state = data['state']
         action = data['action']
@@ -70,8 +71,11 @@ def train_model(model, train_dataloader, val_dataloader, loss_fcn, num_epochs=10
     train_losses = []
     val_losses = []
     for epoch_i in pbar:
+        print("______________________________________________")
         train_loss_i = train_step(model, train_dataloader, optimizer, loss_fcn)
+        print("AAAAAAAAAAAAAAAAAAAAAAAA")
         val_loss_i = val_step(model, val_dataloader, loss_fcn)
+        print("BBBBBBBBBBBBBBBBBBBB")
 
         pbar.set_description(f'Train Loss: {train_loss_i:.4f} | Validation Loss: {val_loss_i:.4f}')
         train_losses.append(train_loss_i)
@@ -82,8 +86,8 @@ def train_model(model, train_dataloader, val_dataloader, loss_fcn, num_epochs=10
 # TODO: Take command arguments to give a file to save in or read from
 if __name__ == '__main__':
     # TODO: Setup data file
-    trainloader = load_data.get_dataloader_multi_step('data.npz') #get_dataloader('data.npz')
-    print("train loader: ", trainloader)
+    train_loader, val_loader = load_data.get_dataloader_drone_multi_step(['/home/ardenk14/catkin_ws/src/DroneDynamics/data/processed_tags3_right_wall_commands_states.csv']) #get_dataloader('data.npz')
+    print("train loader: ", train_loader)
 
     # Create model
     state_dim = 12 # TODO: have dataloader function return these dimensions
