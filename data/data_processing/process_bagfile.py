@@ -73,6 +73,10 @@ def get_directory_and_filenames(suffix=".bag"):
 
 directory, filenames = get_directory_and_filenames(".bag")
 
+# make directory for results
+results_dir = directory + "bagfile_csvs" 
+if not os.path.exists(results_dir):
+  os.makedirs(results_dir)
 
 # look for pickle file with taggroup_dict yaml file
 # This yaml file contains the taggroup_dict, which is a dictionary
@@ -83,7 +87,6 @@ try:
   # read yaml file
   with open(directory + "taggroup_dict.yaml", 'r') as stream:
     taggroup_dict_yaml = yaml.safe_load(stream)
-    print(taggroup_dict_yaml)
     taggroup_dict = {}
     for group_dict in taggroup_dict_yaml["group_list"]:
       taggroup_dict[tuple(group_dict["id_list"])] = group_dict["position_orientation"]
@@ -121,18 +124,16 @@ try:
   for filename in filenames:
     if filename not in times_to_remove_dict:
       print(f"WARNING: times_to_remove_dict does not contain {filename}")
+  
 except:
   print(f"No times_to_remove.yaml file found in {directory}")
   print("Loading default times_to_remove_dict in process_bagfile.py")
   times_to_remove_dict = {}
 
 
-# make directory for results
-results_dir = directory + "bagfile_csvs" 
-if not os.path.exists(results_dir):
-  os.makedirs(results_dir)
-
-
+###############################
+## Process bagfiles ###########
+###############################
 for filename in filenames:
   bag = rosbag.Bag(directory + filename)
   csv_filepath = results_dir +"/"+filename[:-4]+'_commands_states.csv'
@@ -167,7 +168,6 @@ for filename in filenames:
             #       geometry_msgs/Point position
             #       geometry_msgs/Quaternion orientation
 
-          # # TODO: Position is messed up and not sure what matrix multiplication to do on line 163
           state_estimates = np.array([]) # each row is the [x,y,z,qx,qy,qx,qw] state estimate from one group
           for group in message.detections:
             # get arrays from message container
@@ -182,46 +182,22 @@ for filename in filenames:
             #### convert to global coordinates (use SE3 transforms)
             pos_ = np.array([pos.x, pos.y, pos.z])
             orient_ = np.array([orient.x, orient.y, orient.z, orient.w])
-            
-            pos_drone_wrt_global = group_global_pos - pos_
-     
-            rotation_gp_wrt_drone = R.from_quat(orient_)
-            rotation_drone_wrt_gp = rotation_gp_wrt_drone.inv()
             rotation_gp_wrt_global = R.from_quat(group_global_orient)
+
+            # If you don't want to flip the orientation:
+            pos_drone_wrt_global = group_global_pos + pos_
+            rotation_drone_wrt_gp = R.from_quat(orient_)
             rotation_drone_wrt_global = rotation_drone_wrt_gp * rotation_gp_wrt_global
             orient_drone_wrt_global = rotation_drone_wrt_global.as_quat()
+            
+            # # If you want to flip the orientation: 
+            # pos_drone_wrt_global = group_global_pos - pos_
+            # rotation_gp_wrt_drone = R.from_quat(orient_)
+            # rotation_drone_wrt_gp = rotation_gp_wrt_drone.inv()
+            # rotation_drone_wrt_global = rotation_drone_wrt_gp * rotation_gp_wrt_global
+            # orient_drone_wrt_global = rotation_drone_wrt_global.as_quat()
 
             state = np.concatenate((pos_drone_wrt_global, orient_drone_wrt_global))
-          #   # get SE3 matrix of the tag group wrt the drone
-          #   rotation = R.from_quat([orient.x, orient.y, orient.z, orient.w])
-          #   rotation_matrix = rotation.as_dcm()
-          #   # rotation_matrix = tft.quaternion_matrix(orient_)
-          #   gp_wrt_drone = np.identity(4)
-          #   gp_wrt_drone[:3,:3] = rotation_matrix[:3,:3]
-          #   gp_wrt_drone[:3,3] = pos_
-            
-          #   # get SE3 matrix of the drone wrt the tag group
-          #   drone_wrt_gp = np.linalg.inv(gp_wrt_drone)
-            
-          #   # get SE3 matrix of the tag group wrt the global frame
-          #   rotation = R.from_quat(group_global_orient)
-          #   rotation_matrix = rotation.as_dcm() # as_matrix was first added in scipy version 1.4.0 (specifically gh-10979). In 1.2.1 the same functionality is called as_dcm
-          #   # rotation_matrix = tft.quaternion_matrix(group_global_orient)
-          #   gp_wrt_global = np.identity(4)
-          #   gp_wrt_global[:3,:3] = rotation_matrix[:3,:3]
-          #   gp_wrt_global[:3,3] = group_global_pos
-            
-          #   # get SE3 matrix of the drone wrt the global frame
-          #   drone_wrt_global = np.matmul(drone_wrt_gp, gp_wrt_global)#(gp_wrt_global, drone_wrt_gp)# # flipped? TODO: CHECK THIS!
-            
-          #   # add position and (quaternion) orientation to state_estimates
-          #   pos = drone_wrt_global[:3,3]
-          #   orientation_matrix = drone_wrt_global[:3,:3]
-          #   rotation = R.from_dcm(orientation_matrix) # as_matrix was first added in scipy version 1.4.0 (specifically gh-10979). In 1.2.1 the same functionality is called as_dcm
-          #   orientation = R.as_quat(rotation)
-          #   # orientation = tft.quaternion_from_matrix(orientation_matrix)
-            
-          #   state = np.concatenate((pos, orientation))
 
             if len(state_estimates) == 0:
               state_estimates = np.expand_dims(state,0)
@@ -246,34 +222,6 @@ for filename in filenames:
             # then recalculate the average state for the remaining tag groups and write to file
             avg = np.mean(state_estimates, axis=0)
             data_writer.writerow([timestamp, "", "", "", "", avg[0], avg[1], avg[2], avg[3], avg[4], avg[5], avg[6]])
-
-
-          # try: 
-          #   # assume we only have one tag group
-          #   # print(type(message.detections[0].pose.pose.pose.position))
-          #   pos = message.detections[0].pose.pose.pose.position 
-          #   orient = message.detections[0].pose.pose.pose.orientation
-            
-          #   # flip the vector so it represents pose wrt apriltags as opposed to apriltag pose wrt camera
-          #   # as_matrix was first added in scipy version 1.4.0 (specifically gh-10979). In 1.2.1 the same functionality is called as_dcm
-          #   pos.x = -1.0*pos.x
-          #   pos.y = -1.0*pos.y
-          #   pos.z = -1.0*pos.z
-          #   rotation = R.from_quat([orient.x, orient.y, orient.z, orient.w])
-          #   rotation_inv = rotation.inv()
-          #   orientation = rotation_inv.as_quat()
-
-          #   # filter outliers:
-          #   if (pos.x**2 + pos.y**2 + pos.z**2 < OUTLIER_POSITION_THRESHHOLD**2):
-          #     data_writer.writerow([timestamp, "", "", "", "",pos.x, pos.y, pos.z, orientation[0], orientation[1], orientation[2], orientation[3]])
-          
-          # except IndexError:
-          #   # sometimes length of detections is 0
-          #   pass
-          #   # when there is only 1 group, is it a list?
-          #   # pos = message.pose.pose.pose.position
-          #   # orient = message.pose.pose.pose.orientation
-
           
   bag.close()
   print(f"Wrote {csv_filepath}")
