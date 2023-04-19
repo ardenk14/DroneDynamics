@@ -98,7 +98,7 @@ if __name__ == '__main__':
     # Save the model
     print("Saving...")
     torch.save(model.state_dict(), 'multistep_residual_model.pt')
-    print("Saved at bc_model.pt")
+    print("Saved at multistep_residual_model.pt")
 
     # Plot forward only losses
     plt.plot([i for i in range(len(train_losses))], train_losses)
