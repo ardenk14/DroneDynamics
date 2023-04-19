@@ -9,6 +9,8 @@ Data collection process:
     /image_stream/image
     /sent_drone_commands
 
+1.1. Watch the video and manually label which sections should be removed
+
 2. Play back this rosbag but this time run the apriltags detector to get:
     /clock
     /tag_detections 
@@ -36,58 +38,99 @@ import csv
 import rosbag
 from scipy.spatial.transform import Rotation as R
 import numpy as np
-from tf import transformations as tft
+import yaml
 
 OUTLIER_POSITION_THRESHHOLD = 10.0 #[m] from origin
 OUTLIER_ZSCORE_THRESHOLD = 3.0 #z-score
-# get bagfile directory
-directory = sys.argv[1]
-if not directory.endswith("/"):
-  directory += "/"
 
-# create list of bagfiles to scan
-filenames = []
-if len(sys.argv) > 2:
-  for filename_arg in sys.argv[2:]:
-    if not filename_arg.endswith(".bag"):
-      filename_arg = filename_arg + ".bag"
-    
-    f = os.path.join(directory, filename_arg)
-    if os.path.isfile(f) and filename_arg[-4:] == '.bag':
-      print(f"Found bagfile: {f}")    
-      filenames.append(filename_arg)
-else:
-  print(f"Reading all .bag files in {directory}")
-  for filename_arg in os.listdir(directory):
+def get_directory_and_filenames(suffix=".bag"):
+  # get bagfile directory
+  directory = sys.argv[1]
+  if not directory.endswith("/"):
+    directory += "/"
 
-    f = os.path.join(directory, filename_arg)
-    if os.path.isfile(f) and filename_arg[-4:] == '.bag':
-      print(f"Found bagfile: {f}")    
-      filenames.append(filename_arg)
+  # create list of bagfiles to scan
+  filenames = []
+  if len(sys.argv) > 2:
+    for filename_arg in sys.argv[2:]:
+      if not filename_arg.endswith(suffix):
+        filename_arg = filename_arg + suffix
+      
+      f = os.path.join(directory, filename_arg)
+      if os.path.isfile(f) and filename_arg[-4:] == suffix:
+        print(f"Found {suffix} file: {f}")    
+        filenames.append(filename_arg)
+  else:
+    print(f"Reading all {suffix} files in {directory}")
+    for filename_arg in os.listdir(directory):
+
+      f = os.path.join(directory, filename_arg)
+      if os.path.isfile(f) and filename_arg[-4:] == {suffix}:
+        print(f"Found {suffix} file: {f}")    
+        filenames.append(filename_arg)
+  
+  return directory, filenames
+
+directory, filenames = get_directory_and_filenames(".bag")
+
+
+# look for pickle file with taggroup_dict yaml file
+# This yaml file contains the taggroup_dict, which is a dictionary
+# with the following structure:
+# keys: list of all ids in the tag group
+# values: [x,y,z,qx,qy,qz,qw] list of Global position wrt. tag with id 0
+try:
+  # read yaml file
+  with open(directory + "taggroup_dict.yaml", 'r') as stream:
+    taggroup_dict_yaml = yaml.safe_load(stream)
+    print(taggroup_dict_yaml)
+    taggroup_dict = {}
+    for group_dict in taggroup_dict_yaml["group_list"]:
+      taggroup_dict[tuple(group_dict["id_list"])] = group_dict["position_orientation"]
+    print(f"Loaded taggroup_dict from {directory}taggroup_dict.yaml")
+  
+except:
+  print(f"No taggroup_dict.yaml file found in {directory}")
+  print("Loading default taggroup_dict in process_bagfile.py")
+  # keys: list of all ids in the tag group
+  # values: [x,y,z,qx,qy,qz,qw] list of Global position wrt. tag with id 0
+  taggroup_dict = {
+    (0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 
+    25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 
+    43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 
+    61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 
+    79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 
+    97, 98, 99, 100, 101) : [0,0,0,0,0,0,1],
+    (0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 
+    25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 
+    43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 
+    61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 
+    79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 
+    97, 98, 99, 100, 101, 6, 7, 8, 9, 10, 11) : [0,0,0,0,0,0,1]
+  }
+
+# look for yaml file with the times to remove
+# this yaml file contains pairs of 
+# bagfile name : list of (start_time, end_time) tuples to remove from the bagfile
+try:
+  # read yaml file
+  with open(directory + "times_to_remove.yaml", 'r') as stream:
+    times_to_remove_dict = yaml.safe_load(stream)
+  
+  # check if all bagfiles are in the times_to_remove_dict
+  for filename in filenames:
+    if filename not in times_to_remove_dict:
+      print(f"WARNING: times_to_remove_dict does not contain {filename}")
+except:
+  print(f"No times_to_remove.yaml file found in {directory}")
+  print("Loading default times_to_remove_dict in process_bagfile.py")
+  times_to_remove_dict = {}
 
 
 # make directory for results
-results_dir = directory + "bagfile_csvs" #+ filename[:-4]
+results_dir = directory + "bagfile_csvs" 
 if not os.path.exists(results_dir):
   os.makedirs(results_dir)
-
-# keys: list of all ids in the tag group
-# values: [x,y,z,qx,qy,qz,qw] list of Global position wrt. tag with id 0
-taggroup_dict = {
-  (0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 
-  25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 
-  43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 
-  61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 
-  79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 
-  97, 98, 99, 100, 101) : [0,0,0,0,0,0,1],
-  (0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 
-  25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 
-  43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 
-  61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 
-  79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 
-  97, 98, 99, 100, 101, 6, 7, 8, 9, 10, 11) : [0,0,0,0,0,0,1],
-}
-
 
 
 for filename in filenames:

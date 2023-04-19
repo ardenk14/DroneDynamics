@@ -1,0 +1,11 @@
+# crop out regions between [start_time, end_time]
+# bagfile_filename: 
+#   [
+#     [start_time, end_time],
+#     [start_time, end_time]
+#   ]
+# bagfile_filename:
+#   [
+#     [start_time, end_time],
+#     [start_time, end_time]
+#   ] 
