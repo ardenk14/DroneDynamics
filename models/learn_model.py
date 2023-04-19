@@ -6,6 +6,11 @@ import load_data
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
+if torch.cuda.is_available():
+    device = "cuda"
+else:
+    device = "cpu"
+
 
 def train_step(model, train_loader, optimizer, loss_fcn) -> float:
     """
@@ -17,10 +22,8 @@ def train_step(model, train_loader, optimizer, loss_fcn) -> float:
         Loss needs to be MSE loss.
     """
     train_loss = 0. 
-    print("CCCCCCCCCCCCCCCCC")
     for batch_idx, data in enumerate(train_loader):
         optimizer.zero_grad()
-        print("BATCH ID: ", batch_idx)
         
         state = data['state']
         action = data['action']
@@ -71,11 +74,8 @@ def train_model(model, train_dataloader, val_dataloader, loss_fcn, num_epochs=10
     train_losses = []
     val_losses = []
     for epoch_i in pbar:
-        print("______________________________________________")
         train_loss_i = train_step(model, train_dataloader, optimizer, loss_fcn)
-        print("AAAAAAAAAAAAAAAAAAAAAAAA")
         val_loss_i = val_step(model, val_dataloader, loss_fcn)
-        print("BBBBBBBBBBBBBBBBBBBB")
 
         pbar.set_description(f'Train Loss: {train_loss_i:.4f} | Validation Loss: {val_loss_i:.4f}')
         train_losses.append(train_loss_i)
@@ -87,17 +87,17 @@ def train_model(model, train_dataloader, val_dataloader, loss_fcn, num_epochs=10
 if __name__ == '__main__':
     # TODO: Setup data file
     train_loader, val_loader = load_data.get_dataloader_drone_multi_step(['/home/ardenk14/catkin_ws/src/DroneDynamics/data/processed_tags3_right_wall_commands_states.csv']) #get_dataloader('data.npz')
-    print("train loader: ", train_loader)
+    #print("train loader: ", train_loader)
 
     # Create model
     state_dim = 12 # TODO: have dataloader function return these dimensions
     action_dim = 4
-    model = ResidualDynamicsModel(state_dim, action_dim)
+    model = ResidualDynamicsModel(state_dim, action_dim).to(device)
 
     # Train forward model
     pose_loss = nn.MSELoss()
     pose_loss = MultiStepLoss(pose_loss, discount=0.9)
-    train_losses, val_losses = train_model(model, train_loader, val_loader, pose_loss, num_epochs=10000, lr=0.0001)
+    train_losses, val_losses = train_model(model, train_loader, val_loader, pose_loss, num_epochs=100, lr=0.0001)
 
     # Save the model
     print("Saving...")

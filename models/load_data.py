@@ -1,6 +1,7 @@
 import torch
 from torch.utils.data import Dataset, DataLoader, random_split
 import numpy as np
+import pdb
 
 def get_dataloader_drone_multi_step(data_filepath, batch_size=500, train_test=[0.8,0.2]):
     """
@@ -43,7 +44,9 @@ class DroneMultiStepDynamicsDataset(Dataset):
                         #         * actions is a numpy array of shape (trajectory_chunk_length-1, actions_size) containing the actions [u_0, ...., u_{T-1}]
                         #           states and actions both contain np.float32.
         
-        self.trajectory_length = trajectory_chunk_length - num_steps + 1 # Length of each trajectory that you can access
+        #pdb.set_trace()
+        self.trajectory_length = trajectory_chunk_length - num_steps # Length of each trajectory that you can access
+        #print("traject length: ", self.trajectory_length)
         self.num_steps = num_steps
         self.n_trajectories = len(dataset_filenames)
 
@@ -52,12 +55,14 @@ class DroneMultiStepDynamicsDataset(Dataset):
             i = 0
             # Split the data into trajectories of length trajectory_chunk_length
             while i < len(full_csv) - trajectory_chunk_length:
-                commands = torch.from_numpy(full_csv[i:trajectory_chunk_length-1, 1:5]) #(trajectory_chunk_length, 4)
-                states = torch.from_numpy(np.concatenate((full_csv[i:trajectory_chunk_length, 5:8], #position (x,y,z)
-                                                            full_csv[i:trajectory_chunk_length, 19:22], # angular position (roll, pitch, yaw)
-                                                            full_csv[i:trajectory_chunk_length,12:15], # linear velocity (x,y,z)
-                                                            full_csv[i:trajectory_chunk_length,22:25]), # angular velocity (roll, pitch, yaw)
+                commands = torch.from_numpy(full_csv[i:i+trajectory_chunk_length-1, 1:5]) #(trajectory_chunk_length, 4)
+                states = torch.from_numpy(np.concatenate((full_csv[i:i+trajectory_chunk_length, 5:8], #position (x,y,z)
+                                                            full_csv[i:i+trajectory_chunk_length, 19:22], # angular position (roll, pitch, yaw)
+                                                            full_csv[i:i+trajectory_chunk_length,12:15], # linear velocity (x,y,z)
+                                                            full_csv[i:i+trajectory_chunk_length,22:25]), # angular velocity (roll, pitch, yaw)
                                                             axis=1)) #(trajectory_chunk_length, 12) 
+                #print("CMDS: ", commands.shape)
+                #print("States: ", states.shape)
                                                         
                 
                 self.data.append({'states': states, #position (x,y,z)
@@ -66,7 +71,7 @@ class DroneMultiStepDynamicsDataset(Dataset):
 
         self.action_dim = self.data[0]['actions'].shape[1]
         self.state_dim = self.data[0]['states'].shape[1]
-        print("DATA SIZE: ", self.data)
+        #print("DATA SIZE: ", len(self.data))
 
     def __len__(self):
         return len(self.data) * (self.trajectory_length)
@@ -91,6 +96,7 @@ class DroneMultiStepDynamicsDataset(Dataset):
             'action': self.data[trial]['actions'][index:index+self.num_steps],
             'next_state': self.data[trial]['states'][index+1:index+1+self.num_steps]
         }
+        #print("NEXT STATE: ", sample['next_state'].shape)
         return sample
         # ---
 
@@ -226,3 +232,7 @@ if __name__ == "__main__":
     train, val = get_dataloader_drone_multi_step([data_filepath], batch_size=16, train_test=[0.8,0.2])
     for batch_idx, data in enumerate(train):
         print("BATCH ID: ", batch_idx)
+        print(data['state'].shape)
+        print(data['action'].shape)
+        print(data['next_state'].shape)
+    print("END")
