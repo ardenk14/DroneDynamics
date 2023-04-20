@@ -3,10 +3,10 @@ from torch.utils.data import Dataset, DataLoader, random_split
 import numpy as np
 import pdb
 
-def get_dataloader_drone_multi_step(data_filepath, batch_size=500, train_test=[0.8,0.2], chunk_size=1000):
+def get_dataloader_drone_multi_step(data_filepath, batch_size=500, train_test=[0.8,0.2], chunk_size=1000, num_steps=4):
     """
     """
-    d_set = DroneMultiStepDynamicsDataset(data_filepath, chunk_size)
+    d_set = DroneMultiStepDynamicsDataset(data_filepath, chunk_size, num_steps=4)
 
     train, val = random_split(d_set, train_test)
     

@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from models import ResidualDynamicsModel
+from models import ResidualDynamicsModel, AbsoluteDynamicsModel
 from custom_losses import MultiStepLoss
 import load_data
 from tqdm import tqdm
@@ -21,6 +21,7 @@ def train_step(model, train_loader, optimizer, loss_fcn) -> float:
     :return: train_loss <float> representing the average loss among the different mini-batches.
         Loss needs to be MSE loss.
     """
+    model.train()
     train_loss = 0. 
     for batch_idx, data in enumerate(train_loader):
         optimizer.zero_grad()
@@ -45,6 +46,7 @@ def val_step(model, val_loader, loss_fcn) -> float:
     :param optimizer: Pytorch optimizer
     :return: val_loss <float> representing the average loss among the different mini-batches
     """
+    model.eval()
     val_loss = 0.
 
     for batch_idx, data in enumerate(val_loader):
@@ -92,22 +94,24 @@ if __name__ == '__main__':
         r"../data/processed_tags3_right_wallalltimes.csv"
     ]
     # TODO: Setup data file
-    train_loader, val_loader = load_data.get_dataloader_drone_multi_step(data_filepaths) #get_dataloader('data.npz')
+    train_loader, val_loader = load_data.get_dataloader_drone_multi_step(data_filepaths, num_steps=40) #get_dataloader('data.npz')
     #print("train loader: ", train_loader)
 
     # Create model
     state_dim = 12 # TODO: have dataloader function return these dimensions
     action_dim = 4
     model = ResidualDynamicsModel(state_dim, action_dim).to(device)
+    #model = AbsoluteDynamicsModel(state_dim, action_dim).to(device)
 
     # Train forward model
     pose_loss = nn.MSELoss()
     pose_loss = MultiStepLoss(pose_loss, discount=0.9)
-    train_losses, val_losses = train_model(model, train_loader, val_loader, pose_loss, num_epochs=2000, lr=0.001)
+    train_losses, val_losses = train_model(model, train_loader, val_loader, pose_loss, num_epochs=100, lr=0.01)
 
     # Save the model
     print("Saving...")
-    torch.save(model.state_dict(), 'multistep_residual_model.pt')
+    #torch.save(model.state_dict(), 'multistep_residual_model.pt')
+    torch.save(model.state_dict(), 'multistep_absolute_model.pt')
     print("Saved at multistep_residual_model.pt")
 
     # Plot forward only losses
