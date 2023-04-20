@@ -71,6 +71,9 @@ for filename in filenames:
     # df = df.join(df_states['large_timegap_flag'], on = 'time', how = 'left')
     # # df = df.merge(df_states[['time', 'large_timegap_flag']], on='time', how='left')
     
+    # # remove every nth command (but leave the states)
+    # n = 2
+    # df = df[df.index % n == 0 and df['position.x'].notna()]
     
     # Interpolate the states to get a state for each command
     # (commands are at faster rate than the states)
@@ -137,10 +140,15 @@ for filename in filenames:
     df[['roll', 'pitch', 'yaw']] = pd.DataFrame(euler_orient, index=df.index)
     df[['ang_vel_roll', 'ang_vel_pitch', 'ang_vel_yaw']] = pd.DataFrame(euler_ang_vel, index=df.index)
     
-    # Add a column that has a 1 if the NEXT row has a state, and 0 if it doesn't
-    # (ie. if the commands[0] is missing for the next row)
-    # This is so that when we drop the states, we'll still know what the original datapoints were
-    df['has_state'] = df['commands[0]'].notna().astype(int).shift(-1)
+    # # remove the columns with quaternion position and angular velocities
+    # df = df.drop(columns=['orient.x', 'orient.y', 'orient.z', 'orient.w', 'ang_vel.x', 'ang_vel.y', 'ang_vel.z', 'ang_vel.w'])
+    # move the flag to the last column
+
+
+    # # Add a column that has a 1 if the NEXT row has a state, and 0 if it doesn't
+    # # (ie. if the commands[0] is missing for the next row)
+    # # This is so that when we drop the states, we'll still know what the original datapoints were
+    # df['has_state'] = df['commands[0]'].notna().astype(int).shift(-1)
 
     # # get rid of any remaining rows containing Nans (these willl be the locations of states)
     df = df.dropna()

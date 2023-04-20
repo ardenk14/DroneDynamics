@@ -35,7 +35,8 @@ python3 process_bagfile.py ~/Downloads
 import sys
 import os
 import csv
-import rosbag
+import rosbag 
+from rospy import Time
 from scipy.spatial.transform import Rotation as R
 import numpy as np
 import yaml
@@ -61,39 +62,42 @@ def get_directory_and_filenames(suffix=".bag"):
         print(f"Found {suffix} file: {f}")    
         filenames.append(filename_arg)
   else:
-    print(f"Reading all {suffix} files in {directory}")
+    print(f"Looking for all {suffix} files in {directory}:")
     for filename_arg in os.listdir(directory):
-
       f = os.path.join(directory, filename_arg)
-      if os.path.isfile(f) and filename_arg[-4:] == {suffix}:
+      if os.path.isfile(f) and filename_arg[-4:] == suffix:
         print(f"Found {suffix} file: {f}")    
         filenames.append(filename_arg)
   
   return directory, filenames
 
-directory, filenames = get_directory_and_filenames(".bag")
 
-# make directory for results
-results_dir = directory + "bagfile_csvs" 
-if not os.path.exists(results_dir):
-  os.makedirs(results_dir)
+def get_bagfile_csvs_directory(directory):
+  # make directory for results
+  results_dir = directory + "bagfile_csvs" 
+  if not os.path.exists(results_dir):
+    os.makedirs(results_dir)
 
-# look for pickle file with taggroup_dict yaml file
-# This yaml file contains the taggroup_dict, which is a dictionary
-# with the following structure:
-# keys: list of all ids in the tag group
-# values: [x,y,z,qx,qy,qz,qw] list of Global position wrt. tag with id 0
-try:
-  # read yaml file
-  with open(directory + "taggroup_dict.yaml", 'r') as stream:
-    taggroup_dict_yaml = yaml.safe_load(stream)
-    taggroup_dict = {}
-    for group_dict in taggroup_dict_yaml["group_list"]:
-      taggroup_dict[tuple(group_dict["id_list"])] = group_dict["position_orientation"]
-    print(f"Loaded taggroup_dict from {directory}taggroup_dict.yaml")
-  
-except:
-  print(f"No taggroup_dict.yaml file found in {directory}")
+  return results_dir
+
+def get_taggroup_dict(directory=None):
+  # look for pickle file with taggroup_dict yaml file
+  # This yaml file contains the taggroup_dict, which is a dictionary
+  # with the following structure:
+  # keys: list of all ids in the tag group
+  # values: [x,y,z,qx,qy,qz,qw] list of Global position wrt. tag with id 0
+  # try:
+  #   pass
+    # # read yaml file
+    # with open(directory + "taggroup_dict.yaml", 'r') as stream:
+    #   taggroup_dict_yaml = yaml.safe_load(stream)
+    #   taggroup_dict = {}
+    #   for group_dict in taggroup_dict_yaml["group_list"]:
+    #     taggroup_dict[tuple(group_dict["id_list"])] = group_dict["position_orientation"]
+    #   print(f"Loaded taggroup_dict from {directory}taggroup_dict.yaml")
+    
+  # except:
+    # print(f"No taggroup_dict.yaml file found in {directory}")
   print("Loading default taggroup_dict in process_bagfile.py")
   # keys: list of all ids in the tag group
   # values: [x,y,z,qx,qy,qz,qw] list of Global position wrt. tag with id 0
@@ -111,48 +115,49 @@ except:
     79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 
     97, 98, 99, 100, 101, 6, 7, 8, 9, 10, 11) : [0,0,0,0,0,0,1]
   }
+  return taggroup_dict
 
-# look for yaml file with the times to remove
-# this yaml file contains pairs of 
-# bagfile name : list of (start_time, end_time) tuples to remove from the bagfile
-try:
-  # read yaml file
-  with open(directory + "times_to_remove.yaml", 'r') as stream:
-    times_to_remove_dict = yaml.safe_load(stream)
+def get_times_to_keep_dict(directory=None):
+  # look for yaml file with the times to remove
+  # this yaml file contains pairs of 
+  # bagfile name : list of (start_time, end_time) tuples to remove from the bagfile
+  try:
+    # read yaml file
+    with open(directory + "times_to_keep.yaml", 'r') as stream:
+      times_to_keep_dict = yaml.safe_load(stream)
+    
+    # check if all bagfiles are in the times_to_keep_dict
+    for filename in filenames:
+      if filename not in times_to_keep_dict:
+        print(f"WARNING: times_to_keep_dict does not contain {filename}")
+      else:
+        print(f"Found: {filename} in times_to_keep_dict")
   
-  # check if all bagfiles are in the times_to_remove_dict
-  for filename in filenames:
-    if filename not in times_to_remove_dict:
-      print(f"WARNING: times_to_remove_dict does not contain {filename}")
-  
-except:
-  print(f"No times_to_remove.yaml file found in {directory}")
-  print("Loading default times_to_remove_dict in process_bagfile.py")
-  times_to_remove_dict = {}
+  except:
+    print(f"No times_to_keep.yaml file found in {directory}. Processing all times")
+    times_to_keep_dict = {}
 
+  return times_to_keep_dict
 
-###############################
-## Process bagfiles ###########
-###############################
-for filename in filenames:
+def write_bagfile_to_csv(directory, filename, csv_filepath, taggroup_dict, start_time=None, end_time=None):
   bag = rosbag.Bag(directory + filename)
-  csv_filepath = results_dir +"/"+filename[:-4]+'_commands_states.csv'
-  print(f"Writing tag_detections and sent_drone_commands in {filename} to CSV")
-  
+
   with open(csv_filepath, mode='w') as data_file:
     data_writer = csv.writer(data_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-    data_writer.writerow(['time','commands[0]','commands[1]','commands[2]','commands[3]',"position.x", "position.y", "position.z", "orient.x", "orient.y", "orient.z", "orient.w"])
-    #TODO: what are drone_commands [0],[1],etc?
-    t0 = -1
-    for topic, message, timestamp in bag.read_messages(topics=['/sent_drone_commands', '/tag_detections']):
-      if t0 == -1:
-        t0 = timestamp
-      timestamp = (timestamp - t0) #convert to nanoseconds since bag start
-      # print(f"topic: {topic}, time:{timestamp}")
+    data_writer.writerow(['time','commands[0]','commands[1]','commands[2]','commands[3]',"position.x", "position.y", "position.z", "orient.x", "orient.y", "orient.z", "orient.w", "command_state_flag"])
+
+    if start_time and end_time:
+      start_time = Time.from_sec(float(start_time) / 1.0e9)
+      end_time = Time.from_sec(float(end_time) / 1.0e9)
+    else: 
+      start_time = None
+      end_time = None
+    
+    for topic, message, timestamp in bag.read_messages(topics=['/sent_drone_commands', '/tag_detections'], start_time=start_time, end_time=end_time):
       if topic=='/sent_drone_commands' or topic=='sent_drone_commands':
   #       /sent_drone_commands  std_msgs/UInt8MultiArray
           d = message.data
-          data_writer.writerow([timestamp, d[0], d[1], d[2], d[3], "", "", "", "", "", "", ""])
+          data_writer.writerow([timestamp, d[0], d[1], d[2], d[3], "", "", "", "", "", "", "",0])
       elif topic=='/tag_detections' or topic=='tag_detections':
         # message contains an array of pose wrt each visible group
         # AprilTagDetectionArray
@@ -167,74 +172,91 @@ for filename in filenames:
             #     geometry_msgs/Pose pose
             #       geometry_msgs/Point position
             #       geometry_msgs/Quaternion orientation
+          if len(message.detections) == 0:
+            data_writer.writerow([timestamp, "", "", "", "", "", "", "", "", "", "", "",1])
+          else:
+            state_estimates = np.array([]) # each row is the [x,y,z,qx,qy,qx,qw] state estimate from one group
+            for group in message.detections:
+              # get arrays from message container
+              group_global_pos = np.array(taggroup_dict[tuple(group.id)])[:3]
+              group_global_orient = np.array(taggroup_dict[tuple(group.id)])[3:]
+              pos = group.pose.pose.pose.position
+              orient = group.pose.pose.pose.orientation
 
-          state_estimates = np.array([]) # each row is the [x,y,z,qx,qy,qx,qw] state estimate from one group
-          for group in message.detections:
-            # get arrays from message container
-            group_global_pos = np.array(taggroup_dict[tuple(group.id)])[:3]
-            group_global_orient = np.array(taggroup_dict[tuple(group.id)])[3:]
-            pos = group.pose.pose.pose.position
-            orient = group.pose.pose.pose.orientation
+              # filter outliers
+              if (pos.x**2 + pos.y**2 + pos.z**2 > OUTLIER_POSITION_THRESHHOLD**2):
+                continue
+              #### convert to global coordinates (use SE3 transforms)
+              pos_ = np.array([pos.x, pos.y, pos.z])
+              orient_ = np.array([orient.x, orient.y, orient.z, orient.w])
+              rotation_gp_wrt_global = R.from_quat(group_global_orient)
 
-            # filter outliers
-            if (pos.x**2 + pos.y**2 + pos.z**2 > OUTLIER_POSITION_THRESHHOLD**2):
-              continue
-            #### convert to global coordinates (use SE3 transforms)
-            pos_ = np.array([pos.x, pos.y, pos.z])
-            orient_ = np.array([orient.x, orient.y, orient.z, orient.w])
-            rotation_gp_wrt_global = R.from_quat(group_global_orient)
+              # If you don't want to flip the orientation:
+              pos_drone_wrt_global = group_global_pos + pos_
+              rotation_drone_wrt_gp = R.from_quat(orient_)
+              rotation_drone_wrt_global = rotation_drone_wrt_gp * rotation_gp_wrt_global
+              orient_drone_wrt_global = rotation_drone_wrt_global.as_quat()
+              
+              # # If you want to flip the orientation: 
+              # pos_drone_wrt_global = group_global_pos - pos_
+              # rotation_gp_wrt_drone = R.from_quat(orient_)
+              # rotation_drone_wrt_gp = rotation_gp_wrt_drone.inv()
+              # rotation_drone_wrt_global = rotation_drone_wrt_gp * rotation_gp_wrt_global
+              # orient_drone_wrt_global = rotation_drone_wrt_global.as_quat()
 
-            # If you don't want to flip the orientation:
-            pos_drone_wrt_global = group_global_pos + pos_
-            rotation_drone_wrt_gp = R.from_quat(orient_)
-            rotation_drone_wrt_global = rotation_drone_wrt_gp * rotation_gp_wrt_global
-            orient_drone_wrt_global = rotation_drone_wrt_global.as_quat()
+              state = np.concatenate((pos_drone_wrt_global, orient_drone_wrt_global))
+
+              if len(state_estimates) == 0:
+                state_estimates = np.expand_dims(state,0)
+              else:
+                state_estimates = np.concatenate((state_estimates, state), axis=0)
             
-            # # If you want to flip the orientation: 
-            # pos_drone_wrt_global = group_global_pos - pos_
-            # rotation_gp_wrt_drone = R.from_quat(orient_)
-            # rotation_drone_wrt_gp = rotation_gp_wrt_drone.inv()
-            # rotation_drone_wrt_global = rotation_drone_wrt_gp * rotation_gp_wrt_global
-            # orient_drone_wrt_global = rotation_drone_wrt_global.as_quat()
+            if len(state_estimates) == 0: continue
+            elif len(state_estimates[:,0]) == 1:
+              avg = state_estimates[0,:]
+              data_writer.writerow([timestamp, "", "", "", "", avg[0], avg[1], avg[2], avg[3], avg[4], avg[5], avg[6],1])
+            elif len(state_estimates[:,0]) > 1:
+              # filter outliers: 
+              # find the average and sd of all tag groups
+              avg = np.mean(state_estimates, axis=0)
+              std = np.std(state_estimates, axis=0)
+              z_scores = (state_estimates - avg) / std
 
-            state = np.concatenate((pos_drone_wrt_global, orient_drone_wrt_global))
+              # if the z-score is greater than the OUTLIER_ZSCORE_THRESHOLD, remove it
+              outliers = np.where(np.abs(z_scores) > OUTLIER_ZSCORE_THRESHOLD)
+              state_estimates = np.delete(state_estimates, outliers, axis=0)
 
-            if len(state_estimates) == 0:
-              state_estimates = np.expand_dims(state,0)
-            else:
-              state_estimates = np.concatenate((state_estimates, state), axis=0)
-          
-          if len(state_estimates) == 0: continue
-          elif len(state_estimates[:,0]) == 1:
-            avg = state_estimates[0,:]
-            data_writer.writerow([timestamp, "", "", "", "", avg[0], avg[1], avg[2], avg[3], avg[4], avg[5], avg[6]])
-          elif len(state_estimates[:,0]) > 1:
-            # filter outliers: 
-            # find the average and sd of all tag groups
-            avg = np.mean(state_estimates, axis=0)
-            std = np.std(state_estimates, axis=0)
-            z_scores = (state_estimates - avg) / std
-
-            # if the z-score is greater than the OUTLIER_ZSCORE_THRESHOLD, remove it
-            outliers = np.where(np.abs(z_scores) > OUTLIER_ZSCORE_THRESHOLD)
-            state_estimates = np.delete(state_estimates, outliers, axis=0)
-
-            # then recalculate the average state for the remaining tag groups and write to file
-            avg = np.mean(state_estimates, axis=0)
-            data_writer.writerow([timestamp, "", "", "", "", avg[0], avg[1], avg[2], avg[3], avg[4], avg[5], avg[6]])
+              # then recalculate the average state for the remaining tag groups and write to file
+              avg = np.mean(state_estimates, axis=0)
+              data_writer.writerow([timestamp, "", "", "", "", avg[0], avg[1], avg[2], avg[3], avg[4], avg[5], avg[6],1])
           
   bag.close()
   print(f"Wrote {csv_filepath}")
 
 
+def process_all_bagfiles(directory, filenames, results_dir, times_to_keep_dict, taggroup_dict):
+  for filename in filenames:
 
-# parameters for writerow function:
-            # @param topics: list of topics or a single topic. if an empty list is given all topics will be read [optional]
-          # @type  topics: list(str) or str
-          # @param start_time: earliest timestamp of message to return [optional]
-          # @type  start_time: U{genpy.Time}
-          # @param end_time: latest timestamp of message to return [optional]
-          # @type  end_time: U{genpy.Time}
+    if filename not in times_to_keep_dict:
+      csv_filepath = (results_dir +"/"+filename[:-4]+'_raw_'+'alltimes.csv')
+      print(f"Writing {csv_filepath}")
+      write_bagfile_to_csv(directory, filename, csv_filepath, taggroup_dict, start_time=None, end_time=None)
+
+    else:
+      for [start_time, end_time] in times_to_keep_dict[filename]:
+        csv_filepath = (results_dir +"/"+filename[:-4]+'_raw_'+
+              str(start_time)+'_'+str(end_time)+'.csv')
+        print(f"Writing {csv_filepath}")
+        write_bagfile_to_csv(directory, filename, csv_filepath, taggroup_dict, start_time=start_time, end_time=end_time)
+
+        
+
+if __name__ == "__main__":
+  directory, filenames = get_directory_and_filenames(".bag")
+  results_dir = get_bagfile_csvs_directory(directory)
+  times_to_keep_dict = get_times_to_keep_dict(directory)
+  taggroup_dict = get_taggroup_dict(directory)
+  process_all_bagfiles(directory, filenames, results_dir, times_to_keep_dict, taggroup_dict)
 
 
 
