@@ -18,6 +18,22 @@ SHEET_SPACING = 1.5
 
 # key: lowest tag id in group, value: location of lowest tag in group
 # x is horizontal, y is vertical, z is depth (assumed to be the same)
+
+group_locations_left={
+    102: [-43.5,27.5,13]
+    126: [-43.5,51,12.75]
+    132: [-45.5,71.25,12.5]
+    138: [-45.5,39.75,28.25]
+    108: [-45.5,60.75,28.25]
+    144: [-45.5,29,41.5]
+    114: [-45.5,50.5,41.5]
+    120: [-45.5,71.75,41.75]
+    538: [-43.5,20.25,81]
+    540: [-43.5,48,80.8]
+    534: [-43.5,70.75,81]
+    544: [-43.5,35,99.30]
+    542: [-43.5,57.98,80]
+}
 group_locations_dict = {
     0:  [0,0],
     12: [0,24],
@@ -41,6 +57,11 @@ for i in group_locations_dict.keys():
     group_locations_dict[i] = [
         group_locations_dict[i][0]*INCH_TO_METERS,
         group_locations_dict[i][1]*INCH_TO_METERS]
+
+for i in group_locations_left.keys():
+    group_locations_left[i] = [
+        group_locations_left[i][0]*INCH_TO_METERS,
+        group_locations_left[i][1]*INCH_TO_METERS]
 
 # while I don't have the actual tag locations, 
 # I'm going to assume that the tag sheets are evenly spaced
