@@ -1,21 +1,23 @@
 import torch
 from mppi import MPPI
+import numpy as np
 
 class FlightController(object):
     """
     MPPI-based flight controller
     """
 
-    def __init__(self, model, cost_function, num_samples=100, horizon=10):
+    def __init__(self, model, cost_function, num_samples=100, horizon=5):
         #self.env = env
         self.model = model
-        self.target_state = None
+        self.target_state = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=np.float32)
         # MPPI Hyperparameters:
         # --- You may need to tune them
         state_dim = None #env.observation_space.shape[0]
-        u_min = None #torch.from_numpy(env.action_space.low)
-        u_max = None #torch.from_numpy(env.action_space.high)
-        noise_sigma = None #0.5 * torch.eye(env.action_space.shape[0])
+        u_min = torch.tensor([0.0, 100.0, 110.0, 100.0])
+        u_max = torch.tensor([255.0, 158.0, 220.0, 158.0]) #torch.from_numpy(env.action_space.high)
+        u_init = torch.tensor([200.0, 134.0, 165.0, 134.0])
+        noise_sigma = 120 * torch.eye(4)
         lambda_value = 0.01
         
         self.mppi = MPPI(self._compute_dynamics,
@@ -26,7 +28,8 @@ class FlightController(object):
                          noise_sigma=noise_sigma,
                          lambda_=lambda_value,
                          u_min=u_min,
-                         u_max=u_max)
+                         u_max=u_max,
+                         u_init=u_init)
 
     def _compute_dynamics(self, state, action):
         """
