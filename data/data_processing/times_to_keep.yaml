@@ -1,4 +1,4 @@
-# crop out regions between [start_time, end_time]
+# Keep only regions between [start_time, end_time]
 tags2_right_wall_commands_states.csv:
   [
     [1234,2324],
