@@ -52,19 +52,14 @@ def plot_trajectory(filename, tags_filename, index_limit=None, ax=None):
     # reset index
     df = df.reset_index(drop=True)
 
-    # df = df[index_limit[0]:index_limit[1]]
-
     # plot the trajectory
     ax.plot(df["position.x"], df["position.y"], df["position.z"])
 
     # plot the start and end points
-    ax.scatter(df["position.x"][0], df["position.y"][0], df["position.z"][0], c='g', s=8)
-    ax.scatter(df["position.x"][len(df)-1], df["position.y"][len(df)-1], df["position.z"][len(df)-1], c='b', s=8)
+    ax.scatter(df["position.x"][0], df["position.y"][0], df["position.z"][0], c='g', s=10)
+    ax.scatter(df["position.x"][len(df)-1], df["position.y"][len(df)-1], df["position.z"][len(df)-1], c='b', s=10)
 
     # At each point, plot a small coordinate frame indicating the orientation 
-    # use quiver to make a 3d arrow
-    # ax.quiver(df["position.x"], df["position.y"], df["position.z"], df["orientation.x"], df["orientation.y"], df["orientation.z"], length=0.1, normalize=True)
-
     print("Plotting Orientation...")
     orient = R.from_euler('xyz', df[["roll", "pitch", "yaw"]].values, degrees=False).as_dcm() #(N,3,3) # USE .as_dcm() instead of as_matrix() if one doesn't work
     origins = df[["position.x", "position.y", "position.z"]].values #(N,3)
@@ -72,7 +67,6 @@ def plot_trajectory(filename, tags_filename, index_limit=None, ax=None):
         # only  plot orientation if the command_state_flag is 1 (tag detected)
         if df["command_state_flag"][i] == 1:
             ax.quiver(origins[i, 0], origins[i, 1], origins[i, 2], orient[i, :, 0], orient[i, :, 1], orient[i, :, 2], length=0.05, color=['r', 'g', 'b'], normalize=True)
-
 
     ax.set_xlabel("x")
     ax.set_ylabel("y")
@@ -82,7 +76,7 @@ def plot_trajectory(filename, tags_filename, index_limit=None, ax=None):
 
 if __name__ == "__main__":
     # TODO: Make plotting functions more modular
-    plot_trajectory(CSV_FILENAME, TAG_FILENAME, [10000,14000])
+    plot_trajectory(CSV_FILENAME, TAG_FILENAME, [1000,4000])
 
 
 
