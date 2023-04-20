@@ -235,13 +235,13 @@ def process_all_bagfiles(directory, filenames, results_dir, times_to_keep_dict, 
   for filename in filenames:
 
     if filename not in times_to_keep_dict:
-      csv_filepath = (results_dir +"/"+filename[:-4]+'_raw_'+'alltimes.csv')
+      csv_filepath = (results_dir +"/"+filename[:-4]+'alltimes.csv')
       print(f"Writing {csv_filepath}")
       write_bagfile_to_csv(directory, filename, csv_filepath, taggroup_dict, start_time=None, end_time=None)
 
     else:
       for [start_time, end_time] in times_to_keep_dict[filename]:
-        csv_filepath = (results_dir +"/"+filename[:-4]+'_raw_'+
+        csv_filepath = (results_dir +"/"+filename[:-4]+
               str(start_time)+'_'+str(end_time)+'.csv')
         print(f"Writing {csv_filepath}")
         write_bagfile_to_csv(directory, filename, csv_filepath, taggroup_dict, start_time=start_time, end_time=end_time)
