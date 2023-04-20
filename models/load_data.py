@@ -58,7 +58,7 @@ class DroneMultiStepDynamicsDataset(Dataset):
             # Split the data into trajectories of length trajectory_chunk_length
             while i < len(full_csv) - trajectory_chunk_length:
                 commands = torch.from_numpy(full_csv[i:i+trajectory_chunk_length-1, 1:5]) #(trajectory_chunk_length, 4)
-                states = torch.from_numpy(full_csv[i:i+trajectory_chunk_length-1, 5:17])
+                states = torch.from_numpy(full_csv[i:i+trajectory_chunk_length, 5:17])
                 # states = torch.from_numpy(np.concatenate((full_csv[i:i+trajectory_chunk_length, 5:8], #position (x,y,z)
                 #                                             full_csv[i:i+trajectory_chunk_length, 19:22], # angular position (roll, pitch, yaw)
                 #                                             full_csv[i:i+trajectory_chunk_length,12:15], # linear velocity (x,y,z)
@@ -68,7 +68,7 @@ class DroneMultiStepDynamicsDataset(Dataset):
                 self.data.append({'states': states, #position (x,y,z)
                                   'actions': commands})
                 i += trajectory_chunk_length
-            print(f"{filename} of length {len(full_csv)} split into {i/trajectory_chunk_length} chunks")
+            print(f"{filename} of length {len(full_csv)} split into {i//trajectory_chunk_length} chunks")
 
         print("DATA SIZE: ", len(self.data))
         self.action_dim = self.data[0]['actions'].shape[1]
