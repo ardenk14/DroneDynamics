@@ -66,12 +66,12 @@ def plot_trajectory(filename, tags_filename, index_limit=None, ax=None):
     # ax.quiver(df["position.x"], df["position.y"], df["position.z"], df["orientation.x"], df["orientation.y"], df["orientation.z"], length=0.1, normalize=True)
 
     print("Plotting Orientation...")
-    orient = R.from_euler('xyz', df[["roll", "pitch", "yaw"]].values, degrees=True).as_matrix() #(N,3,3)
+    orient = R.from_euler('xyz', df[["roll", "pitch", "yaw"]].values, degrees=False).as_dcm() #(N,3,3) # USE .as_dcm() instead of as_matrix() if one doesn't work
     origins = df[["position.x", "position.y", "position.z"]].values #(N,3)
     for i in range(0,len(df)):
-        # only  plot orientation if the command_state flag is 1
-        if df["command_state"][i] == 1:
-            ax.quiver(origins[i, 0], origins[i, 1], origins[i, 2], orient[i, :, 0], orient[i, :, 1], orient[i, :, 2], length=0.08, color=['r', 'g', 'b'], normalize=False)
+        # only  plot orientation if the command_state_flag is 1 (tag detected)
+        if df["command_state_flag"][i] == 1:
+            ax.quiver(origins[i, 0], origins[i, 1], origins[i, 2], orient[i, :, 0], orient[i, :, 1], orient[i, :, 2], length=0.05, color=['r', 'g', 'b'], normalize=True)
 
 
     ax.set_xlabel("x")
