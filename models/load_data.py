@@ -35,6 +35,12 @@ class DroneMultiStepDynamicsDataset(Dataset):
         :param num_steps: <int> number of steps to predict in the future.
         :param trajectory_chunk_length: <int> Each dataset file is chunked into trajectories of fixed length for easier loading
         """
+
+        if torch.cuda.is_available():
+            self.device = torch.device('cuda')
+        else:
+            self.device = torch.device('cpu')
+
         self.data = [] # List of dictionaries containing the state-action trajectories.
                         #     Each trajectory dictionary should have the following structure:
                         #         {'states': states,
@@ -65,8 +71,8 @@ class DroneMultiStepDynamicsDataset(Dataset):
                 #                                             full_csv[i:i+trajectory_chunk_length,22:25]), # angular velocity (roll, pitch, yaw)
                 #                                             axis=1)) #(trajectory_chunk_length, 12)                                                      
                 
-                self.data.append({'states': states, #position (x,y,z)
-                                  'actions': commands})
+                self.data.append({'states': states.to(self.device), #position (x,y,z)
+                                  'actions': commands.to(self.device)})
                 i += trajectory_chunk_length
             print(f"{filename} of length {len(full_csv)} split into {i//trajectory_chunk_length} chunks")
 

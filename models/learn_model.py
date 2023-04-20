@@ -86,8 +86,13 @@ def train_model(model, train_dataloader, val_dataloader, loss_fcn, num_epochs=10
 # TODO: Take command arguments to give a file to save in or read from
 if __name__ == '__main__':
     print("DEVICE: ", device)
+    data_filepaths = [
+        r"../data/processed_tags2_right_wall1681856256.2356164_1681856260.4683304.csv",
+        r"../data/processed_tags2_right_wall1681856264.1351044_1681856271.0596986.csv",
+        r"../data/processed_tags3_right_wallalltimes.csv"
+    ]
     # TODO: Setup data file
-    train_loader, val_loader = load_data.get_dataloader_drone_multi_step(['/home/ardenk14/catkin_ws/src/DroneDynamics/data/processed_tags3_right_wall_commands_states.csv']) #get_dataloader('data.npz')
+    train_loader, val_loader = load_data.get_dataloader_drone_multi_step(data_filepaths) #get_dataloader('data.npz')
     #print("train loader: ", train_loader)
 
     # Create model
