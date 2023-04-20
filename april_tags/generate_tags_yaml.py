@@ -7,6 +7,7 @@ Create a tags.yaml file for the tags in our test space
 # YAML_FILE_DIR = r"C:\Users\arthu\OneDrive\Documents\Classwork\ROB498_Robot_Learning_for_Planning_and_Control\project\DroneDynamics\april_tags"
 YAML_FILE_NAME = "./tags_right_wall.yaml"
 TAG_SPACING_WITHIN_6GROUP = 0.0877 # meters
+TAG_SPACING_WITHIN_2GROUP = 0.1341 # meters
 INCH_TO_METERS = 0.0254
 
 # for fake generation
@@ -18,22 +19,23 @@ SHEET_SPACING = 1.5
 
 # key: lowest tag id in group, value: location of lowest tag in group
 # x is horizontal, y is vertical, z is depth (assumed to be the same)
-
+# contains left wall
 group_locations_left={
-    102: [-43.5,27.5,13]
-    126: [-43.5,51,12.75]
-    132: [-45.5,71.25,12.5]
-    138: [-45.5,39.75,28.25]
-    108: [-45.5,60.75,28.25]
-    144: [-45.5,29,41.5]
-    114: [-45.5,50.5,41.5]
-    120: [-45.5,71.75,41.75]
-    538: [-43.5,20.25,81]
-    540: [-43.5,48,80.8]
-    534: [-43.5,70.75,81]
-    544: [-43.5,35,99.30]
-    542: [-43.5,57.98,80]
+    102: [-43.5,27.5,13],
+    126: [-43.5,51,12.75],
+    132: [-45.5,71.25,12.5],
+    138: [-45.5,39.75,28.25],
+    108: [-45.5,60.75,28.25],
+    144: [-45.5,29,41.5],
+    114: [-45.5,50.5,41.5],
+    120: [-45.5,71.75,41.75],
+    538: [-43.5,20.25,81],
+    540: [-43.5,48,80.8],
+    534: [-43.5,70.75,81],
+    544: [-43.5,35,99.30],
+    542: [-43.5,57.98,80],
 }
+# contains right wall
 group_locations_dict = {
     0:  [0,0],
     12: [0,24],
@@ -124,25 +126,30 @@ class AprilTag():
 
 
 class TagGroup():
-    def __init__(self, tag0_id, tag0_pos):
+    def __init__(self, tag0_id, tag0_pos, n_tags=6):
         self.tag0_id = tag0_id
         self.tag0_pos = tag0_pos
+        self.n_tags = n_tags
         self.tags = []
 
-        positions = self.generate_6group_positions(tag0_pos)
-        ids = self.generate_6group_ids(tag0_id)
-        orientations = self.generate_6group_orientations()
-        for i in range(6):
-            tag = AprilTag(ids[i], 0.06, positions[i], orientations[i])
-            self.tags.append(tag)
+        if n_tags==6:
+            positions = self.generate_6group_positions(tag0_pos)
+            ids = self.generate_group_ids(tag0_id,n_tags)
+            orientations = self.generate_6group_orientations()
+            for i in range(n_tags):
+                tag = AprilTag(ids[i], 0.06, positions[i], orientations[i])
+                self.tags.append(tag)
 
-    def generate_6group_positions(self, tag0_pos):
+    def generate_6group_positions(self, tag0_pos, tag0_orientation):
         """
         Given the position of tag 0, generate the positions of the other 5 tags in the group
         Sheets are laid out in the order: 
         0 1 2
         3 4 5
         """
+        # TODO: incorporate orientation of tag0
+
+
         positions = []
         for i in range(3):
             x = tag0_pos[0] + (i % 3)*TAG_SPACING_WITHIN_6GROUP
@@ -156,25 +163,32 @@ class TagGroup():
             positions.append([x,y,z])
         return positions
         
-    def generate_6group_ids(self, tag0_id):
+    def generate_group_ids(self, tag0_id):
         """
-        Given the id of tag 0, generate the ids of the other 5 tags in the group (by counting upwards)
+        Given the id of tag 0, generate the ids of the other (n_tags-1) tags in the group (by counting upwards)
         """
         ids = []
-        for i in range(6):
+        for i in range(self.n_tags):
             ids.append(tag0_id + i)
         return ids
 
-    def generate_6group_orientations(self):
+    def generate_group_orientations(self, orientation0=[0.0,0.0,0.0,1.0]):
         """
         Generate the orientations of the tags in the group
-        (all tags in the group have the same orientation)
+        (assume all tags in the group have the same orientation)
         """
-        orientation = [0.0,0.0,0.0,1.0] # [x,y,z,w]
         orientations = []
-        for i in range(6):
-            orientations.append(orientation)
+        for i in range(self.n_tags):
+            orientations.append(orientation0)
         return orientations
+    
+
+
+    
+    def generate_2group_positions(self, tag0_pos, tag0_orientation):
+        # TODO: Generate 2group positions
+        pass
+        # return positions
     
     def convert_to_str_no_formatting(self):
         """
