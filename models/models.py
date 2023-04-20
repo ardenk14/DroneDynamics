@@ -45,10 +45,10 @@ class ResidualDynamicsModel(nn.Module):
         self.state_dim = state_dim
         self.action_dim = action_dim
 
-        if torch.cuda.is_available():
+        """if torch.cuda.is_available():
             self.device = torch.device('cuda')
         else:
-            self.device = torch.device('cpu')
+            self.device = torch.device('cpu')"""
 
         self.model =  nn.Sequential(
           nn.BatchNorm1d(self.state_dim + self.action_dim),
@@ -57,7 +57,7 @@ class ResidualDynamicsModel(nn.Module):
           nn.Linear(100, 100),
           nn.ReLU(),
           nn.Linear(100, self.state_dim)
-        ).to(self.device)
+        )#.to(self.device)
 
     def forward(self, state, action):
         """
@@ -66,8 +66,8 @@ class ResidualDynamicsModel(nn.Module):
         :param action: torch tensor of shape (..., action_dim)
         :return: next_state: torch tensor of shape (..., state_dim)
         """
-        state = state.to(self.device)
-        action = action.to(self.device)
+        state = state#.to(self.device)
+        action = action#.to(self.device)
         inpt = torch.cat((state, action), dim=-1)
         next_state = self.model(inpt) + state
 
