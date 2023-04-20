@@ -217,9 +217,13 @@ def get_dataloader_multi_step(data_fp, batch_size=500):
 
 
 if __name__ == "__main__":
-    data_filepath = r"../data/processed_tags2_right_wall_raw_1681856256.2356164_1681856260.4683304.csv"
+    data_filepaths = [
+        r"../data/processed_tags2_right_wall1681856256.2356164_1681856260.4683304.csv",
+        r"../data/processed_tags2_right_wall1681856264.1351044_1681856271.0596986.csv",
+        r"../data/processed_tags3_right_wallalltimes.csv"
+    ]
     chunk_size = 498
-    dataset = DroneMultiStepDynamicsDataset([data_filepath], chunk_size)
+    dataset = DroneMultiStepDynamicsDataset(data_filepaths, chunk_size)
     print(f"dataset length: {len(dataset)}")
     
     # get first sample and unpack
@@ -230,7 +234,7 @@ if __name__ == "__main__":
     print("first action trajectory: ", first_data["action"])
     print("first next_state trajectory", first_data['next_state'])
 
-    train, val = get_dataloader_drone_multi_step([data_filepath], batch_size=16, train_test=[0.8,0.2], chunk_size=chunk_size)
+    train, val = get_dataloader_drone_multi_step(data_filepaths, batch_size=16, train_test=[0.8,0.2], chunk_size=chunk_size)
     for batch_idx, data in enumerate(train):
         print("BATCH ID: ", batch_idx)
         print(data['state'].shape)
