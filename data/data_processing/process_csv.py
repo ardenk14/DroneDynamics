@@ -96,6 +96,7 @@ for filename in filenames:
     df['vel.x'] = df['position.x'].diff() / (df['time'].diff()) 
     df['vel.y'] = df['position.y'].diff() / (df['time'].diff()) 
     df['vel.z'] = df['position.z'].diff() / (df['time'].diff()) 
+    # can't do the same for angular velocity
     
     # # get rid of any remaining rows containing Nans (breaks quaternion to euler conversion)
     # (do this after taking diff())
@@ -112,24 +113,15 @@ for filename in filenames:
     ang_vel = spline(times, 1)
     df[['ang_vel_x', 'ang_vel_y', 'ang_vel_z']] = pd.DataFrame(ang_vel, columns=['ang_vel_x', 'ang_vel_y', 'ang_vel_z'])
 
-    # # (angular velocity still in quaternion form, time in seconds)
-    # df['ang_vel.x'] = df['orient.x'].diff() / (df['time'].diff())
-    # df['ang_vel.y'] = df['orient.y'].diff() / (df['time'].diff())
-    # df['ang_vel.z'] = df['orient.z'].diff() / (df['time'].diff())
-    # df['ang_vel.w'] = df['orient.w'].diff() / (df['time'].diff())
-    # # convert quaternions to euler angles for angular velocity 
-    # q2 = R.from_quat(df[['ang_vel.x', 'ang_vel.y','ang_vel.z','ang_vel.w']])#.values)
-    # euler_ang_vel = q2.as_euler('xyz', degrees=True)
-    # df[['ang_vel_x', 'ang_vel_y', 'ang_vel_z']] = pd.DataFrame(euler_ang_vel, columns=['ang_vel_x', 'ang_vel_y', 'ang_vel_z'])
-
+    # encode angle as first two columns of rotation matrix flattened, concat
 
     # time,commands[0],commands[1],commands[2],commands[3],position.x,position.y,position.z,orient.x,orient.y,orient.z,orient.w,command_state_flag,vel.x,vel.y,vel.z,ang_vel.x,ang_vel.y,ang_vel.z,ang_vel.w,roll,pitch,yaw,ang_vel_x,ang_vel_y,ang_vel_z
     # make the dataframe have only the following columns (in order, without quaternions):
-    df = df[['time','commands[0]','commands[1]','commands[2]','commands[3]','position.x','position.y','position.z','roll','pitch','yaw','vel.x','vel.y','vel.z','ang_vel_x','ang_vel_y','ang_vel_z']]
+    df = df[['time','commands[0]','commands[1]','commands[2]','commands[3]','position.x','position.y','position.z','roll','pitch','yaw','vel.x','vel.y','vel.z','ang_vel_x','ang_vel_y','ang_vel_z','command_state_flag']]
 
     # # get rid of any remaining rows containing Nans (breaks quaternion to euler conversion)
     df = df.dropna()
-    
+
     # Save the interpolated DataFrame back to a CSV file
     df.to_csv(file_to_write, index=False)
     print(f"Wrote {file_to_write}")

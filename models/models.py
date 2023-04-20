@@ -12,6 +12,7 @@ class AbsoluteDynamicsModel(nn.Module):
         self.action_dim = action_dim
 
         self.model =  nn.Sequential(
+          nn.BatchNorm1d(self.state_dim + self.action_dim),
           nn.Linear(self.state_dim + self.action_dim, 100),
           nn.ReLU(),
           nn.Linear(100, 100),
@@ -50,6 +51,7 @@ class ResidualDynamicsModel(nn.Module):
             self.device = torch.device('cpu')
 
         self.model =  nn.Sequential(
+          nn.BatchNorm1d(self.state_dim + self.action_dim),
           nn.Linear(self.state_dim + self.action_dim, 100),
           nn.ReLU(),
           nn.Linear(100, 100),

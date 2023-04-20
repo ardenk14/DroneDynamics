@@ -33,9 +33,9 @@ class MultiStepLoss(nn.Module):
         """
         Compute the multi-step loss resultant of multi-querying the model from (state, action) and comparing the predictions with targets.
         """
-        state = state.to(self.device)
-        actions = actions.to(self.device)
-        target_states = target_states.to(self.device)
+        state = state#.to(self.device)
+        actions = actions#.to(self.device)
+        target_states = target_states#.to(self.device)
         last_state = state
         # Keep track of last action
         loss = 0.0

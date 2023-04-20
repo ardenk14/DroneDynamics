@@ -4,7 +4,7 @@ import pandas as pd
 from mpl_toolkits.mplot3d import Axes3D # <--- This is important for 3d plotting 
 import yaml
 import torch
-from models import  ResidualDynamicsModel
+from models import  ResidualDynamicsModel, AbsoluteDynamicsModel
 
 
 """
@@ -13,7 +13,7 @@ Also plot model predictions.
 usage: first change filename to plot
 python3 plot_dataset.py
 """
-CSV_FILENAME = "../data/processed_tags3_right_wall_commands_states.csv"
+CSV_FILENAME = "../data/processed_tags3_right_wallalltimes.csv" #../data/processed_tags3_right_wall_commands_states.csv"
 TAG_FILENAME = "../april_tags/tags_right_wall.yaml"
 
 def plot_trajectory(model, filename, tags_filename, index_limit=None, reset_state=False):
@@ -23,15 +23,15 @@ def plot_trajectory(model, filename, tags_filename, index_limit=None, reset_stat
         index_limit = [0, len(df)]
 
     results = []
-    state = torch.tensor([df['position.x'][index_limit[0]], df['position.y'][index_limit[0]], df['position.z'][index_limit[0]], df['roll'][index_limit[0]], df['pitch'][index_limit[0]], df['yaw'][index_limit[0]], df['vel.x'][index_limit[0]], df['vel.y'][index_limit[0]], df['vel.z'][index_limit[0]], df['ang_vel_roll'][index_limit[0]], df['ang_vel_pitch'][index_limit[0]], df['ang_vel_yaw'][index_limit[0]]], dtype=torch.float32)
+    state = torch.tensor([[df['position.x'][index_limit[0]], df['position.y'][index_limit[0]], df['position.z'][index_limit[0]], df['roll'][index_limit[0]], df['pitch'][index_limit[0]], df['yaw'][index_limit[0]], df['vel.x'][index_limit[0]], df['vel.y'][index_limit[0]], df['vel.z'][index_limit[0]], df['ang_vel_x'][index_limit[0]], df['ang_vel_y'][index_limit[0]], df['ang_vel_z'][index_limit[0]]]], dtype=torch.float32)
     with torch.no_grad():
         for i in range(index_limit[0], index_limit[1]):
             if reset_state:
-                state = torch.tensor([df['position.x'][i], df['position.y'][i], df['position.z'][i], df['roll'][i], df['pitch'][i], df['yaw'][i], df['vel.x'][i], df['vel.y'][i], df['vel.z'][i], df['ang_vel_roll'][i], df['ang_vel_pitch'][i], df['ang_vel_yaw'][i]], dtype=torch.float32)
-            action = torch.tensor([df['commands[0]'][i], df['commands[1]'][i], df['commands[2]'][i], df['commands[3]'][i]], dtype=torch.float32)
+                state = torch.tensor([[df['position.x'][i], df['position.y'][i], df['position.z'][i], df['roll'][i], df['pitch'][i], df['yaw'][i], df['vel.x'][i], df['vel.y'][i], df['vel.z'][i], df['ang_vel_x'][i], df['ang_vel_y'][i], df['ang_vel_z'][i]]], dtype=torch.float32)
+            action = torch.tensor([[df['commands[0]'][i], df['commands[1]'][i], df['commands[2]'][i], df['commands[3]'][i]]], dtype=torch.float32)
 
             result = model(state, action)
-            results.append(-1 * result.detach().numpy())
+            results.append(result.cpu().detach().numpy()[0])
             state = result
 
     with open(tags_filename, 'r') as f:
@@ -52,9 +52,9 @@ def plot_trajectory(model, filename, tags_filename, index_limit=None, reset_stat
             ax.scatter(x, z, y, c='r', s=8)
 
     if index_limit:
-        ax.plot(-1*df["position.x"][index_limit[0]:index_limit[1]], -1*df["position.z"][index_limit[0]:index_limit[1]], -1*df["position.y"][index_limit[0]:index_limit[1]])
+        ax.plot(df["position.x"][index_limit[0]:index_limit[1]], df["position.z"][index_limit[0]:index_limit[1]], df["position.y"][index_limit[0]:index_limit[1]])
     else:
-        ax.plot(-1*df["position.x"], -1*df["position.z"], -1*df["position.y"])
+        ax.plot(df["position.x"], df["position.z"], df["position.y"])
 
     ax.plot([i[0] for i in results], [i[2] for i in results], [i[1] for i in results])
     
@@ -67,7 +67,9 @@ def plot_trajectory(model, filename, tags_filename, index_limit=None, reset_stat
 if __name__ == "__main__":
     state_dim = 12
     action_dim = 4
+    #model = AbsoluteDynamicsModel(state_dim, action_dim)
+    #model.load_state_dict(torch.load('multistep_absolute_model.pt'))
     model = ResidualDynamicsModel(state_dim, action_dim)
     model.load_state_dict(torch.load('multistep_residual_model.pt'))
     model.eval()
-    plot_trajectory(model, CSV_FILENAME, TAG_FILENAME, [10000,14000], reset_state=True)
+    plot_trajectory(model, CSV_FILENAME, TAG_FILENAME, [100,500], reset_state=False) #[10000,14000]
