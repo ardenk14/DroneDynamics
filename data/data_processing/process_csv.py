@@ -127,7 +127,9 @@ for filename in filenames:
     # make the dataframe have only the following columns (in order, without quaternions):
     df = df[['time','commands[0]','commands[1]','commands[2]','commands[3]','position.x','position.y','position.z','roll','pitch','yaw','vel.x','vel.y','vel.z','ang_vel_x','ang_vel_y','ang_vel_z']]
 
-
+    # # get rid of any remaining rows containing Nans (breaks quaternion to euler conversion)
+    df = df.dropna()
+    
     # Save the interpolated DataFrame back to a CSV file
     df.to_csv(file_to_write, index=False)
     print(f"Wrote {file_to_write}")

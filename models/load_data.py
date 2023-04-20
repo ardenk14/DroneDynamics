@@ -3,10 +3,10 @@ from torch.utils.data import Dataset, DataLoader, random_split
 import numpy as np
 import pdb
 
-def get_dataloader_drone_multi_step(data_filepath, batch_size=500, train_test=[0.8,0.2]):
+def get_dataloader_drone_multi_step(data_filepath, batch_size=500, train_test=[0.8,0.2], chunk_size=1000):
     """
     """
-    d_set = DroneMultiStepDynamicsDataset(data_filepath, 2000)
+    d_set = DroneMultiStepDynamicsDataset(data_filepath, chunk_size)
 
     train, val = random_split(d_set, train_test)
     
@@ -53,6 +53,8 @@ class DroneMultiStepDynamicsDataset(Dataset):
         for filename in dataset_filenames:
             full_csv = np.loadtxt(filename, delimiter=',', dtype=np.float32, skiprows=1)
             i = 0
+            if len(full_csv) < trajectory_chunk_length: 
+                print(f"WARNING: length ({len(full_csv)}) of {filename} is less than trajectory chunk length ({trajectory_chunk_length})")
             # Split the data into trajectories of length trajectory_chunk_length
             while i < len(full_csv) - trajectory_chunk_length:
                 commands = torch.from_numpy(full_csv[i:i+trajectory_chunk_length-1, 1:5]) #(trajectory_chunk_length, 4)
@@ -66,10 +68,11 @@ class DroneMultiStepDynamicsDataset(Dataset):
                 self.data.append({'states': states, #position (x,y,z)
                                   'actions': commands})
                 i += trajectory_chunk_length
+            print(f"{filename} of length {len(full_csv)} split into {i/trajectory_chunk_length} chunks")
 
+        print("DATA SIZE: ", len(self.data))
         self.action_dim = self.data[0]['actions'].shape[1]
         self.state_dim = self.data[0]['states'].shape[1]
-        #print("DATA SIZE: ", len(self.data))
 
     def __len__(self):
         return len(self.data) * (self.trajectory_length)
@@ -214,8 +217,8 @@ def get_dataloader_multi_step(data_fp, batch_size=500):
 
 
 if __name__ == "__main__":
-    data_filepath = r"../data/processed_tags3_right_wall_commands_states.csv"
-    chunk_size = 2000
+    data_filepath = r"../data/processed_tags2_right_wall_raw_1681856256.2356164_1681856260.4683304.csv"
+    chunk_size = 498
     dataset = DroneMultiStepDynamicsDataset([data_filepath], chunk_size)
     print(f"dataset length: {len(dataset)}")
     
@@ -227,7 +230,7 @@ if __name__ == "__main__":
     print("first action trajectory: ", first_data["action"])
     print("first next_state trajectory", first_data['next_state'])
 
-    train, val = get_dataloader_drone_multi_step([data_filepath], batch_size=16, train_test=[0.8,0.2])
+    train, val = get_dataloader_drone_multi_step([data_filepath], batch_size=16, train_test=[0.8,0.2], chunk_size=chunk_size)
     for batch_idx, data in enumerate(train):
         print("BATCH ID: ", batch_idx)
         print(data['state'].shape)
