@@ -146,18 +146,15 @@ def write_bagfile_to_csv(directory, filename, csv_filepath, taggroup_dict, start
     data_writer = csv.writer(data_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
     data_writer.writerow(['time','commands[0]','commands[1]','commands[2]','commands[3]',"position.x", "position.y", "position.z", "orient.x", "orient.y", "orient.z", "orient.w", "command_state_flag"])
 
-    if start_time and end_time:
-      start_time = Time.from_sec(float(start_time) / 1.0e9)
-      end_time = Time.from_sec(float(end_time) / 1.0e9)
-    else: 
-      start_time = None
-      end_time = None
+    if start_time: start_time = Time.from_sec(float(start_time)) # / 1.0e9)
+    if end_time: end_time = Time.from_sec(float(end_time))# / 1.0e9)
     
     for topic, message, timestamp in bag.read_messages(topics=['/sent_drone_commands', '/tag_detections'], start_time=start_time, end_time=end_time):
+      t = timestamp.to_sec()
       if topic=='/sent_drone_commands' or topic=='sent_drone_commands':
   #       /sent_drone_commands  std_msgs/UInt8MultiArray
           d = message.data
-          data_writer.writerow([timestamp, d[0], d[1], d[2], d[3], "", "", "", "", "", "", "",0])
+          data_writer.writerow([t, d[0], d[1], d[2], d[3], "", "", "", "", "", "", "",0])
       elif topic=='/tag_detections' or topic=='tag_detections':
         # message contains an array of pose wrt each visible group
         # AprilTagDetectionArray
@@ -173,7 +170,7 @@ def write_bagfile_to_csv(directory, filename, csv_filepath, taggroup_dict, start
             #       geometry_msgs/Point position
             #       geometry_msgs/Quaternion orientation
           if len(message.detections) == 0:
-            data_writer.writerow([timestamp, "", "", "", "", "", "", "", "", "", "", "",1])
+            data_writer.writerow([t, "", "", "", "", "", "", "", "", "", "", "",2])
           else:
             state_estimates = np.array([]) # each row is the [x,y,z,qx,qy,qx,qw] state estimate from one group
             for group in message.detections:
@@ -214,7 +211,7 @@ def write_bagfile_to_csv(directory, filename, csv_filepath, taggroup_dict, start
             if len(state_estimates) == 0: continue
             elif len(state_estimates[:,0]) == 1:
               avg = state_estimates[0,:]
-              data_writer.writerow([timestamp, "", "", "", "", avg[0], avg[1], avg[2], avg[3], avg[4], avg[5], avg[6],1])
+              data_writer.writerow([t, "", "", "", "", avg[0], avg[1], avg[2], avg[3], avg[4], avg[5], avg[6],1])
             elif len(state_estimates[:,0]) > 1:
               # filter outliers: 
               # find the average and sd of all tag groups
