@@ -68,8 +68,10 @@ def plot_trajectory(filename, tags_filename, index_limit=None, ax=None):
     print("Plotting Orientation...")
     orient = R.from_euler('xyz', df[["roll", "pitch", "yaw"]].values, degrees=True).as_matrix() #(N,3,3)
     origins = df[["position.x", "position.y", "position.z"]].values #(N,3)
-    for i in range(0,len(df), 100):
-        ax.quiver(origins[i, 0], origins[i, 1], origins[i, 2], orient[i, :, 0], orient[i, :, 1], orient[i, :, 2], length=0.08, color=['r', 'g', 'b'], normalize=False)
+    for i in range(0,len(df)):
+        # only  plot orientation if the command_state flag is 1
+        if df["command_state"][i] == 1:
+            ax.quiver(origins[i, 0], origins[i, 1], origins[i, 2], orient[i, :, 0], orient[i, :, 1], orient[i, :, 2], length=0.08, color=['r', 'g', 'b'], normalize=False)
 
 
     ax.set_xlabel("x")
