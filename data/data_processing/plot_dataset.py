@@ -44,7 +44,7 @@ def plot_trajectory(filename, tags_filename, index_limit=None, ax=None):
         fig = plt.figure()
         ax = fig.add_subplot(projection='3d')
 
-    plot_apriltags(tags_filename, ax=ax)
+    # plot_apriltags(tags_filename, ax=ax)
 
     # trim the trajectory to contain only rows within index limits
     if not index_limit: index_limit = [0, len(df)]
@@ -61,7 +61,10 @@ def plot_trajectory(filename, tags_filename, index_limit=None, ax=None):
 
     # At each point, plot a small coordinate frame indicating the orientation 
     print("Plotting Orientation...")
-    orient = R.from_euler('xyz', df[["roll", "pitch", "yaw"]].values, degrees=False).as_dcm() #(N,3,3) # USE .as_dcm() instead of as_matrix() if one doesn't work
+    try:
+        orient = R.from_euler('xyz', df[["roll", "pitch", "yaw"]].values, degrees=False).as_dcm() #(N,3,3) # USE .as_dcm() instead of as_matrix() if one doesn't work
+    except AttributeError:
+        orient = R.from_euler('xyz', df[["roll", "pitch", "yaw"]].values, degrees=False).as_matrix()
     origins = df[["position.x", "position.y", "position.z"]].values #(N,3)
     for i in range(0,len(df)):
         # only  plot orientation if the command_state_flag is 1 (tag detected)
@@ -76,7 +79,7 @@ def plot_trajectory(filename, tags_filename, index_limit=None, ax=None):
 
 if __name__ == "__main__":
     # TODO: Make plotting functions more modular
-    plot_trajectory(CSV_FILENAME, TAG_FILENAME, [1000,4000])
+    plot_trajectory(CSV_FILENAME, TAG_FILENAME, [1000,1200])
 
 
 
