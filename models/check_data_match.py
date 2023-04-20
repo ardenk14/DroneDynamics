@@ -24,14 +24,15 @@ def plot_trajectory(model, filename, tags_filename, index_limit=None, reset_stat
 
     results = []
     state = torch.tensor([df['position.x'][index_limit[0]], df['position.y'][index_limit[0]], df['position.z'][index_limit[0]], df['roll'][index_limit[0]], df['pitch'][index_limit[0]], df['yaw'][index_limit[0]], df['vel.x'][index_limit[0]], df['vel.y'][index_limit[0]], df['vel.z'][index_limit[0]], df['ang_vel_roll'][index_limit[0]], df['ang_vel_pitch'][index_limit[0]], df['ang_vel_yaw'][index_limit[0]]], dtype=torch.float32)
-    for i in range(index_limit[0], index_limit[1]):
-        if reset_state:
-            state = torch.tensor([df['position.x'][i], df['position.y'][i], df['position.z'][i], df['roll'][i], df['pitch'][i], df['yaw'][i], df['vel.x'][i], df['vel.y'][i], df['vel.z'][i], df['ang_vel_roll'][i], df['ang_vel_pitch'][i], df['ang_vel_yaw'][i]], dtype=torch.float32)
-        action = torch.tensor([df['commands[0]'][i], df['commands[1]'][i], df['commands[2]'][i], df['commands[3]'][i]], dtype=torch.float32)
+    with torch.no_grad():
+        for i in range(index_limit[0], index_limit[1]):
+            if reset_state:
+                state = torch.tensor([df['position.x'][i], df['position.y'][i], df['position.z'][i], df['roll'][i], df['pitch'][i], df['yaw'][i], df['vel.x'][i], df['vel.y'][i], df['vel.z'][i], df['ang_vel_roll'][i], df['ang_vel_pitch'][i], df['ang_vel_yaw'][i]], dtype=torch.float32)
+            action = torch.tensor([df['commands[0]'][i], df['commands[1]'][i], df['commands[2]'][i], df['commands[3]'][i]], dtype=torch.float32)
 
-        result = model(state, action)
-        results.append(-1 * result.detach().numpy())
-        state = result
+            result = model(state, action)
+            results.append(-1 * result.detach().numpy())
+            state = result
 
     with open(tags_filename, 'r') as f:
         data = yaml.safe_load(f)

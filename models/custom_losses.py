@@ -1,4 +1,5 @@
 import torch.nn as nn
+import torch
 
 class SingleStepLoss(nn.Module):
 
@@ -23,10 +24,18 @@ class MultiStepLoss(nn.Module):
         self.loss = loss_fn
         self.discount = discount
 
+        if torch.cuda.is_available():
+            self.device = torch.device('cuda')
+        else:
+            self.device = torch.device('cpu')
+
     def forward(self, model, state, actions, target_states):
         """
         Compute the multi-step loss resultant of multi-querying the model from (state, action) and comparing the predictions with targets.
         """
+        state = state.to(self.device)
+        actions = actions.to(self.device)
+        target_states = target_states.to(self.device)
         last_state = state
         # Keep track of last action
         loss = 0.0
