@@ -53,7 +53,7 @@ class DroneMultiStepDynamicsDataset(Dataset):
         #pdb.set_trace()
         self.trajectory_length = trajectory_chunk_length - num_steps # Length of each trajectory that you can access
         #print("traject length: ", self.trajectory_length)
-        self.num_steps = num_steps
+        self.num_steps = num_steps # Number of steps BEYOND the current that you want to predict
         self.n_trajectories = len(dataset_filenames)
 
         for filename in dataset_filenames:
@@ -62,23 +62,21 @@ class DroneMultiStepDynamicsDataset(Dataset):
             if len(full_csv) < trajectory_chunk_length: 
                 print(f"WARNING: length ({len(full_csv)}) of {filename} is less than trajectory chunk length ({trajectory_chunk_length})")
             # Split the data into trajectories of length trajectory_chunk_length
-            while i < len(full_csv) - trajectory_chunk_length:
+            while i <= len(full_csv) - trajectory_chunk_length:
                 commands = torch.from_numpy(full_csv[i:i+trajectory_chunk_length-1, 1:5]) #(trajectory_chunk_length, 4)
-                states = torch.from_numpy(full_csv[i:i+trajectory_chunk_length, 5:17])
-                # states = torch.from_numpy(np.concatenate((full_csv[i:i+trajectory_chunk_length, 5:8], #position (x,y,z)
-                #                                             full_csv[i:i+trajectory_chunk_length, 19:22], # angular position (roll, pitch, yaw)
-                #                                             full_csv[i:i+trajectory_chunk_length,12:15], # linear velocity (x,y,z)
-                #                                             full_csv[i:i+trajectory_chunk_length,22:25]), # angular velocity (roll, pitch, yaw)
-                #                                             axis=1)) #(trajectory_chunk_length, 12)                                                      
+                states = torch.from_numpy(full_csv[i:i+trajectory_chunk_length, 5:20])
+                # 15-dimensional state space: position (x,y,z), angular position (first two columns of 3x3 rotation matrix), linear velocity (x,y,z), angular velocity (roll, pitch, yaw)                                      
                 
                 self.data.append({'states': states.to(self.device), #position (x,y,z)
                                   'actions': commands.to(self.device)})
                 i += trajectory_chunk_length
             print(f"{filename} of length {len(full_csv)} split into {i//trajectory_chunk_length} chunks")
 
-        print("DATA SIZE: ", len(self.data))
+        print("Number of chunks in self.data: ", len(self.data))
+        
         self.action_dim = self.data[0]['actions'].shape[1]
         self.state_dim = self.data[0]['states'].shape[1]
+
 
     def __len__(self):
         return len(self.data) * (self.trajectory_length)
@@ -228,7 +226,7 @@ if __name__ == "__main__":
         r"../data/processed_tags2_right_wall1681856264.1351044_1681856271.0596986.csv",
         r"../data/processed_tags3_right_wallalltimes.csv"
     ]
-    chunk_size = 498
+    chunk_size = 500
     dataset = DroneMultiStepDynamicsDataset(data_filepaths, chunk_size)
     print(f"dataset length: {len(dataset)}")
     

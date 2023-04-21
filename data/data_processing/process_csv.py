@@ -20,7 +20,7 @@ import sys
 import os
 import pandas as pd
 import numpy as np
-from scipy.spatial.transform import Rotation , RotationSpline
+from scipy.spatial.transform import Rotation , RotationSpline, Slerp
 
 LARGE_TIMEGAP_THRESHHOLD = 0.1 # [s] (note that csvs are in nanoseconds by default)
 
@@ -68,8 +68,8 @@ for filename in filenames:
     # (commands are at faster rate than the states)
     # At each command, fill in the states by interpolating (by time) between the previous and next state
 
+    ### interpolate the commands columns
     df = df.set_index('time')     # set the index to time if doing interp by index
-    # interpolate the commands columns
     df['commands[0]'] = df['commands[0]'].interpolate(method='index')
     df['commands[1]'] = df['commands[1]'].interpolate(method='index')
     df['commands[2]'] = df['commands[2]'].interpolate(method='index')
@@ -80,46 +80,66 @@ for filename in filenames:
     df['commands[2]'] = df['commands[2]'].astype(int)
     df['commands[3]'] = df['commands[3]'].astype(int)
 
-    # interpolate positions
+    ### interpolate positions
     df['position.x'] = df['position.x'].interpolate(method='cubic') #method='index'
     df['position.y'] = df['position.y'].interpolate(method='cubic')
     df['position.z'] = df['position.z'].interpolate(method='cubic')
-    # interpolate orientations (is this fair to do or should I use scipy?)
-    df['orient.x'] = df['orient.x'].interpolate(method='cubic')
-    df['orient.y'] = df['orient.y'].interpolate(method='cubic')
-    df['orient.z'] = df['orient.z'].interpolate(method='cubic')
-    df['orient.w'] = df['orient.w'].interpolate(method='cubic')
-
     df = df.reset_index() # reset the index to be the row number
 
-    # Add velocity columns (time in seconds)
+    ### Get orientations
+    # We want to represent the orientation as a 6D vector, 
+    # constructed by converting the quaternion to a rotation matrix,
+    # taking the first two columns, and then flattening and concatenating them.
+    # We need to do two things:
+    # 1) interpolate the quaternions to all the commands (but use scipy Slerp to keep the quaternion norm = 1)
+    # 2) convert the quaternions to rotation matrix and then to 6D vector representation
+
+    # create a dataframe containing only the rows with states (ie. where command_state_flag == 1)
+    df_states = df[df['command_state_flag'] == 1]
+    # create a Rotation object from the quaternions
+    orient = Rotation.from_quat(df_states[['orient.x', 'orient.y','orient.z','orient.w']])#.values)
+    state_times = df_states['time'].values #times that these orientations correspond to
+    # create a Slerp object from the state_times and the orientations
+    slerp = Slerp(state_times, orient)
+    # get the full column of times (which are all the values to which we want to interpolate)
+    # these need to be between the first and last state times
+    times = df['time'].values
+    # remove the times before the first state time and after the last state time
+    times = times[(times >= state_times[0]) & (times <= state_times[-1])]
+    # get the interpolated orientations
+    rotation_interp = slerp(times)
+    # convert the rotation object to a matrix
+    try:
+      rotation_matrix = rotation_interp.as_matrix() #(n, 3, 3)
+    except AttributeError:
+      rotation_matrix = rotation_interp.as_dcm()
+    # get the first two columns of the rotation matrix
+    rotation_matrix_2 = rotation_matrix[:,:,0:2] # (n, 3, 2)
+
+    # add the flattened matrix to the dataframe
+    # (put them in at the timestamps of state_times[0], and then pad the rest with NaNs)
+    rot_df = pd.DataFrame(rotation_matrix_2.reshape(-1,6), columns=['R11','R21','R31','R12','R22','R32'])
+    rot_df['time'] = times
+    df = pd.merge_asof(df, rot_df, on='time', direction='nearest')
+
+    ### Add velocity columns (time in seconds)
     df['vel.x'] = df['position.x'].diff() / (df['time'].diff()) 
     df['vel.y'] = df['position.y'].diff() / (df['time'].diff()) 
     df['vel.z'] = df['position.z'].diff() / (df['time'].diff()) 
     # can't do the same for angular velocity
     
-    # # get rid of any remaining rows containing Nans (breaks quaternion to euler conversion)
-    # (do this after taking diff())
-    df = df.dropna()
-    # convert quaternions to euler angles for orientation 
-    orient = Rotation.from_quat(df[['orient.x', 'orient.y','orient.z','orient.w']])#.values)
-    euler_orient = orient.as_euler('xyz', degrees=False)
-    df[['roll', 'pitch', 'yaw']] = pd.DataFrame(euler_orient, columns=['roll', 'pitch', 'yaw']) #add to dataframe
-    
-    # get angular velocity: Use scipy to create rotation objects and then 
-    # rotation spline to get ang_velocity from angle. 
-    times = df['time'].values
-    spline = RotationSpline(times, orient)
+    ### Get angular velocity
+    # use scipy RotationSpline to get angular velocity from orientation (scipy objects we created above)
+    spline = RotationSpline(state_times, orient)
     ang_vel = spline(times, 1)
     df[['ang_vel_x', 'ang_vel_y', 'ang_vel_z']] = pd.DataFrame(ang_vel, columns=['ang_vel_x', 'ang_vel_y', 'ang_vel_z'])
+    # angular velocity is a 3D vector, whereas position is not a vector, so it is actually ok to not convert to 6D rotation matrix representation
 
-    # encode angle as first two columns of rotation matrix flattened, concat
-
-    # time,commands[0],commands[1],commands[2],commands[3],position.x,position.y,position.z,orient.x,orient.y,orient.z,orient.w,command_state_flag,vel.x,vel.y,vel.z,ang_vel.x,ang_vel.y,ang_vel.z,ang_vel.w,roll,pitch,yaw,ang_vel_x,ang_vel_y,ang_vel_z
+    # time,commands[0],commands[1],commands[2],commands[3],position.x,position.y,position.z,orient.x,orient.y,orient.z,orient.w,command_state_flag,R11,R21,R31,R12,R22,R32,vel.x,vel.y,vel.z,ang_vel_x,ang_vel_y,ang_vel_z
     # make the dataframe have only the following columns (in order, without quaternions):
-    df = df[['time','commands[0]','commands[1]','commands[2]','commands[3]','position.x','position.y','position.z','roll','pitch','yaw','vel.x','vel.y','vel.z','ang_vel_x','ang_vel_y','ang_vel_z','command_state_flag']]
+    df = df[['time','commands[0]','commands[1]','commands[2]','commands[3]','position.x','position.y','position.z',"R11","R21","R31","R12","R22","R32",'vel.x','vel.y','vel.z','ang_vel_x','ang_vel_y','ang_vel_z','command_state_flag']]
 
-    # # get rid of any remaining rows containing Nans (breaks quaternion to euler conversion)
+    # get rid of any remaining rows containing Nans (vel doesn't have values at start and end)
     df = df.dropna()
 
     # Save the interpolated DataFrame back to a CSV file
