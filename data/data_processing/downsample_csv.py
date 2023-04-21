@@ -41,5 +41,9 @@ def downsample_csv(directory, filename, sample_rate=10):
 
 if __name__ == "__main__":
     directory, filenames = get_directory_and_filenames(suffix=".csv")
+    sample_rate = 30
     for filename in filenames:
-        downsample_csv(directory, filename)
+        # if the first character is a number, it is a downsampled csv
+        if filename[0].isdigit():
+            continue
+        downsample_csv(directory, filename, sample_rate=sample_rate)
