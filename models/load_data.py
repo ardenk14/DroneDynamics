@@ -6,7 +6,7 @@ import pdb
 def get_dataloader_drone_multi_step(data_filepath, batch_size=500, train_test=[0.8,0.2], chunk_size=1000, num_steps=4):
     """
     """
-    d_set = DroneMultiStepDynamicsDataset(data_filepath, chunk_size, num_steps=4)
+    d_set = DroneMultiStepDynamicsDataset(data_filepath, chunk_size, num_steps=num_steps)
 
     train, val = random_split(d_set, train_test)
     
@@ -51,7 +51,7 @@ class DroneMultiStepDynamicsDataset(Dataset):
                         #           states and actions both contain np.float32.
         
         #pdb.set_trace()
-        self.trajectory_length = trajectory_chunk_length - num_steps # Length of each trajectory that you can access
+        self.trajectory_length = trajectory_chunk_length - num_steps# Length of each trajectory that you can access
         #print("traject length: ", self.trajectory_length)
         self.num_steps = num_steps # Number of steps BEYOND the current that you want to predict
         self.n_trajectories = len(dataset_filenames)
@@ -238,7 +238,10 @@ if __name__ == "__main__":
     print("first action trajectory: ", first_data["action"])
     print("first next_state trajectory", first_data['next_state'])
 
-    train, val = get_dataloader_drone_multi_step(data_filepaths, batch_size=16, train_test=[0.8,0.2], chunk_size=chunk_size)
+    val_size = int(len(dataset)*0.2)
+    train_size = len(dataset)- val_size
+
+    train, val = get_dataloader_drone_multi_step(data_filepaths, batch_size=16, train_test=[train_size,val_size], chunk_size=chunk_size)
     for batch_idx, data in enumerate(train):
         print("BATCH ID: ", batch_idx)
         print(data['state'].shape)
