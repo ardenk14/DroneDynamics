@@ -61,15 +61,29 @@ def plot_trajectory(filename, tags_filename, index_limit=None, ax=None):
 
     # At each point, plot a small coordinate frame indicating the orientation 
     print("Plotting Orientation...")
-    try:
-        orient = R.from_euler('xyz', df[["roll", "pitch", "yaw"]].values, degrees=False).as_dcm() #(N,3,3) # USE .as_dcm() instead of as_matrix() if one doesn't work
-    except AttributeError:
-        orient = R.from_euler('xyz', df[["roll", "pitch", "yaw"]].values, degrees=False).as_matrix()
+    # unpack the angular orientation, which is encoded as the first two columns of the rotation matrix
+    col1 = np.expand_dims(df[["R11", "R21", "R31"]], axis=2) 
+    col2 = np.expand_dims(df[["R12", "R22", "R32"]], axis=2) 
+    # create col3 using cross product
+    col3 = np.cross(col1, col2, axisa=1, axisb=1, axisc=1)
+    # create the rotation matrix (N,3,3)
+    orient = np.concatenate((col1, col2, col3), axis=2) #(N,3,3)
+    # # check that the columns are orthogonal
+    # for i in range(0,orient.shape[0], 100):
+    #   print(np.dot(orient[i,:,0], orient[i,:,2].T))
+    
+    # was from euler state representation
+    # try:
+    #     orient = R.from_euler('xyz', df[["roll", "pitch", "yaw"]].values, degrees=False).as_dcm() #(N,3,3) # USE .as_dcm() instead of as_matrix() if one doesn't work
+    # except AttributeError:
+    #     orient = R.from_euler('xyz', df[["roll", "pitch", "yaw"]].values, degrees=False).as_matrix()
     origins = df[["position.x", "position.y", "position.z"]].values #(N,3)
+
+
     for i in range(0,len(df)):
         # only  plot orientation if the command_state_flag is 1 (tag detected)
         if df["command_state_flag"][i] == 1:
-            ax.quiver(origins[i, 0], origins[i, 1], origins[i, 2], orient[i, :, 0], orient[i, :, 1], orient[i, :, 2], length=0.05, color=['r', 'g', 'b'], normalize=True)
+            ax.quiver(origins[i, 0], origins[i, 1], origins[i, 2], orient[i, :, 0], orient[i, :, 1], orient[i, :, 2], length=0.1, color=['r', 'g', 'b'], normalize=True)
 
     ax.set_xlabel("x")
     ax.set_ylabel("y")
@@ -79,7 +93,7 @@ def plot_trajectory(filename, tags_filename, index_limit=None, ax=None):
 
 if __name__ == "__main__":
     # TODO: Make plotting functions more modular
-    plot_trajectory(CSV_FILENAME, TAG_FILENAME, [1000,1200])
+    plot_trajectory(CSV_FILENAME, TAG_FILENAME, [1000,4000])
 
 
 

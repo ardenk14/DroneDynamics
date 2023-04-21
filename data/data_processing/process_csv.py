@@ -9,6 +9,7 @@ Process a csv file containing April tag detections and states (position/orientat
 python3 process_csv.py csv_directory
 python3 process_csv.py csv_directory csv_name1 csv_name2
 python3 process_csv.py ~/Downloads/bagfile_csvs
+python process_csv.py ../bagfiles/bagfile_csvs
 
 IDEAS:
 What if we keep only the rows with states?
@@ -108,19 +109,35 @@ for filename in filenames:
     times = times[(times >= state_times[0]) & (times <= state_times[-1])]
     # get the interpolated orientations
     rotation_interp = slerp(times)
+
     # convert the rotation object to a matrix
     try:
       rotation_matrix = rotation_interp.as_matrix() #(n, 3, 3)
     except AttributeError:
       rotation_matrix = rotation_interp.as_dcm()
-    # get the first two columns of the rotation matrix
-    rotation_matrix_2 = rotation_matrix[:,:,0:2] # (n, 3, 2)
+    # flatten the matrix
+    col1 = rotation_matrix[:,:,0]
+    col2 = rotation_matrix[:,:,1]
+    stack = np.concatenate((col1, col2), axis=1) # (n, 6)
+
+    # # get the first two columns of the rotation matrix
+    # rotation_matrix_2 = rotation_matrix[:,:,0:2] # (n, 3, 2)
+    # stack = rotation_matrix_2.reshape(-1,6) # (n, 6)
 
     # add the flattened matrix to the dataframe
     # (put them in at the timestamps of state_times[0], and then pad the rest with NaNs)
-    rot_df = pd.DataFrame(rotation_matrix_2.reshape(-1,6), columns=['R11','R21','R31','R12','R22','R32'])
+    rot_df = pd.DataFrame(stack, columns=['R11','R21','R31','R12','R22','R32'])
     rot_df['time'] = times
     df = pd.merge_asof(df, rot_df, on='time', direction='nearest')
+
+    ### Also add euler angles, just to play with
+    # convert the rotation object to euler angles
+    euler = rotation_interp.as_euler('xyz', degrees=False)
+    # add the euler angles to the dataframe
+    euler_df = pd.DataFrame(euler, columns=['roll', 'pitch', 'yaw'])
+    # merge the euler angles into the dataframe at the correct times
+    euler_df['time'] = times
+    df = pd.merge_asof(df, euler_df, on='time', direction='nearest')
 
     ### Add velocity columns (time in seconds)
     df['vel.x'] = df['position.x'].diff() / (df['time'].diff()) 
@@ -137,7 +154,12 @@ for filename in filenames:
 
     # time,commands[0],commands[1],commands[2],commands[3],position.x,position.y,position.z,orient.x,orient.y,orient.z,orient.w,command_state_flag,R11,R21,R31,R12,R22,R32,vel.x,vel.y,vel.z,ang_vel_x,ang_vel_y,ang_vel_z
     # make the dataframe have only the following columns (in order, without quaternions):
-    df = df[['time','commands[0]','commands[1]','commands[2]','commands[3]','position.x','position.y','position.z',"R11","R21","R31","R12","R22","R32",'vel.x','vel.y','vel.z','ang_vel_x','ang_vel_y','ang_vel_z','command_state_flag']]
+    df = df[['time','commands[0]','commands[1]','commands[2]','commands[3]',
+             'position.x','position.y','position.z',
+             "R11","R21","R31","R12","R22","R32",
+             'vel.x','vel.y','vel.z',
+             'ang_vel_x','ang_vel_y','ang_vel_z',
+             'command_state_flag', 'roll', 'pitch', 'yaw']]
 
     # get rid of any remaining rows containing Nans (vel doesn't have values at start and end)
     df = df.dropna()
