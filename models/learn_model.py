@@ -110,8 +110,8 @@ if __name__ == '__main__':
 
     # Save the model
     print("Saving...")
-    #torch.save(model.state_dict(), 'multistep_residual_model.pt')
-    torch.save(model.state_dict(), 'multistep_absolute_model.pt')
+    torch.save(model.state_dict(), 'multistep_residual_model.pt')
+    #torch.save(model.state_dict(), 'multistep_absolute_model.pt')
     print("Saved at multistep_residual_model.pt")
 
     # Plot forward only losses

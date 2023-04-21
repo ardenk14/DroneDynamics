@@ -11,7 +11,7 @@ def free_flight_cost_function(state, action):
     target_pose = 0 #TARGET_POSE_FREE_TENSOR  # torch tensor of shape (3,) containing (pose_x, pose_y, pose_theta)
     cost = None
 
-    Q = torch.eye(12, device=state.device)
+    Q = torch.eye(state.shape[-1], device=state.device)
     #Q[2, 2] = 0.1
     cost = torch.diagonal((state - target_pose) @ Q @ (state - target_pose).t())
     return cost

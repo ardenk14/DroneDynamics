@@ -10,7 +10,7 @@ class FlightController(object):
     def __init__(self, model, cost_function, num_samples=100, horizon=5):
         #self.env = env
         self.model = model
-        self.target_state = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=np.float32)
+        self.target_state = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=np.float32)
         # MPPI Hyperparameters:
         # --- You may need to tune them
         state_dim = None #env.observation_space.shape[0]
