@@ -214,7 +214,7 @@ def process_all_bagfiles(directory, filenames, results_dir, times_to_keep_dict, 
   for filename in filenames:
 
     if filename not in times_to_keep_dict:
-      csv_filepath = (results_dir +"/"+filename[:-4]+'alltimes.csv')
+      csv_filepath = (results_dir +"/"+filename[:-4]+'_alltimes.csv')
       print(f"Writing {csv_filepath}")
       write_bagfile_to_csv(directory, filename, csv_filepath, taggroup_dict, start_time=None, end_time=None)
 

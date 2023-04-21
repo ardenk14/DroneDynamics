@@ -21,7 +21,7 @@ def downsample_csv(directory, filename, sample_rate=10):
     """
     df = pd.read_csv(directory + filename)
     df2 = df.copy()
-    file_to_write = directory + f"/{sample_rate}hz_" + filename
+    file_to_write = directory + "/"+str(sample_rate) +"hz_" + filename
     print(f"Downsampling from {filename} to {file_to_write}")
 
     # remove every nth command (but leave the rows where command_state_flag == 1 (original states))

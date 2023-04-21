@@ -99,6 +99,10 @@ for filename in filenames:
 
     # create a dataframe containing only the rows with states (ie. where command_state_flag == 1)
     df_states = df[df['command_state_flag'] == 1]
+    if len(df_states) <=10: 
+      print(f"Too few states found. Ignoring {filename}")
+      continue
+
     # create a Rotation object from the quaternions
     orient = Rotation.from_quat(df_states[['orient.x', 'orient.y','orient.z','orient.w']])#.values)
     state_times = df_states['time'].values #times that these orientations correspond to
@@ -107,6 +111,7 @@ for filename in filenames:
     # get the full column of times (which are all the values to which we want to interpolate)
     # these need to be between the first and last state times
     times = df['time'].values
+
     # remove the times before the first state time and after the last state time
     times = times[(times >= state_times[0]) & (times <= state_times[-1])]
     # get the interpolated orientations
