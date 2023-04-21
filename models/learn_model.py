@@ -98,7 +98,7 @@ if __name__ == '__main__':
     #print("train loader: ", train_loader)
 
     # Create model
-    state_dim = 12 # TODO: have dataloader function return these dimensions
+    state_dim = 15 # TODO: have dataloader function return these dimensions
     action_dim = 4
     model = ResidualDynamicsModel(state_dim, action_dim).to(device)
     #model = AbsoluteDynamicsModel(state_dim, action_dim).to(device)
