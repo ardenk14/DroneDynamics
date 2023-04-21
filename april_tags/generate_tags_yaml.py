@@ -22,7 +22,7 @@ SHEET_SPACING = 1.5
 # key: lowest tag id in group, value: location of lowest tag in group
 # x is horizontal, y is vertical, z is depth (assumed to be the same)
 
-# contains left wall
+# contains all group tag locations
 group_locations={
     '6tags_left':{
         102: [-43.5 , 27.5  , 13    ,0,0,1],
@@ -60,6 +60,7 @@ group_locations={
         542: [-43.5 , 57.98, 98.8 , 0,0,1],
     }
 }
+
 # convert fron inches to meters
 for i in group_locations.keys():
     for j in group_locations[i].keys():
@@ -70,18 +71,6 @@ for i in group_locations.keys():
             group_locations[i][j][3], # flag_x
             group_locations[i][j][4], # flag_y
             group_locations[i][j][5]] # flag_z
-        
-# while I don't have the actual tag locations, 
-# I'm going to assume that the tag sheets are evenly spaced
-def generate_fake_tag_locations():
-    """
-    Generate the (fake) locations of all the tags in the test space
-    """
-    for i in range(NUM_SHEETS_RIGHT_WALL_X*NUM_SHEETS_RIGHT_WALL_Y):
-        x = (i % NUM_SHEETS_RIGHT_WALL_X) * SHEET_SPACING
-        y = (i // NUM_SHEETS_RIGHT_WALL_Y) * SHEET_SPACING
-        group_locations_dict[i*6] = [x,y,0]
-
 
 def quat_to_euler(orientation_quat):
     """ convert orientation from quaternion to euler angles"""
@@ -130,16 +119,16 @@ class AprilTag():
         tag_dict_str = tag_dict_str[:-2] + "}"
         return tag_dict_str
 
-
 class TagGroup():
     def __init__(self, tag0_id, tag0_pos, n_tags=6):
         self.tag0_id = tag0_id
-        self.tag0_pos = tag0_pos[:3]
-        self.flags = tag0_pos[3:]
+        self.tag0_pos = tag0_pos[:3] # First three coordinates are positions (x,y,z).
+        self.flags = tag0_pos[3:]    # Next three positions are flags for left/right wall.
         self.n_tags = n_tags
         self.tags = []
         
-        
+        # Checking if the flags correspond to the left 
+        # wall or the right wall for quarternion assignment.
         if self.flags==[0,0,1]:
             self.orientation = [0.0, 0.70710678, 0.0, 0.70710678]
         else:
@@ -151,23 +140,22 @@ class TagGroup():
         elif self.n_tags==2:
             positions = self.generate_2group_positions()
             tag_size = TAG2_SIZE
-            #positions_right = self.generate_6group_positions_left(tag0_pos,flags=[1,0,0])
-            #positions_left = self.generate_6group_positions_left(tag0_pos,flags=[0,0,1])
+        
         ids = self.generate_group_ids(tag0_id)
         orientations = self.generate_group_orientations()
-        
-        #orientations = self.generate_6group_orientations()
         for i in range(n_tags):
             tag = AprilTag(ids[i],tag_size,positions[i],orientations[i])
             self.tags.append(tag)
-            #tag_left = AprilTag(ids[i], TAG6_SIZE, positions_left[i], orientations[i])
-            #tag_right = AprilTag(ids[i], TAG6_SIZE, positions_right[i], orientations[i])
-            #self.tags.append(tag_left)
     
     def generate_2group_positions(self):
+        """
+        Given the position of tag 0, generate the positions of the next tag in the group
+        Sheets are laid out in the order: 
+        0 1
+        """
         positions = []
         flag_x,flag_y,flag_z = self.flags
-        for i in range(2):
+        for i in range(self.n_tags):
             x = self.tag0_pos[0] + flag_x*(i % 2)*TAG_SPACING_WITHIN_6GROUP
             y = self.tag0_pos[1]
             z = self.tag0_pos[2] - flag_z*(i % 2)*TAG_SPACING_WITHIN_6GROUP
@@ -194,27 +182,6 @@ class TagGroup():
             x = self.tag0_pos[0] + flag_x*(i % 3)*TAG_SPACING_WITHIN_6GROUP
             y = self.tag0_pos[1] - TAG_SPACING_WITHIN_6GROUP
             z = self.tag0_pos[2] - flag_z*(i%3)*TAG_SPACING_WITHIN_6GROUP
-            positions.append([x,y,z])
-        return positions
-    
-    def generate_6group_positions(self, tag0_pos, tag0_orientation):
-        """
-        Given the position of tag 0, generate the positions of the other 5 tags in the group
-        Sheets are laid out in the order: 
-        0 1 2
-        3 4 5
-        """
-        # TODO: incorporate orientation of tag0
-        positions = []
-        for i in range(3):
-            x = tag0_pos[0] + (i % 3)*TAG_SPACING_WITHIN_6GROUP
-            y = tag0_pos[1]
-            z = 0.0
-            positions.append([x,y,z])
-        for i in range(3):
-            x = tag0_pos[0] + (i % 3)*TAG_SPACING_WITHIN_6GROUP
-            y = tag0_pos[1] - TAG_SPACING_WITHIN_6GROUP
-            z = 0.0
             positions.append([x,y,z])
         return positions
         
@@ -258,52 +225,51 @@ class TagGroup():
 
         return tag_group_str
     
-def generate_tags_yaml(write_file=True,group_dict=None,n_tags=6):
+def generate_tags_yaml(group_dicts=None,n_tags_list=[6,6,2]):
     """
+    @args
+    group_dicts: List of group dictionaries with their global 
+                 positions and flags for updating group tags
+    n_tags_list: The number of tags in each group corresponding
+                 to the respective group dicts.
     Generate the tags.yaml file for the tags in our test space
     """
-    tag_groups_list = []
-
-    for id in group_dict:
-        tag_group = TagGroup(id, group_dict[id],n_tags=n_tags)
-        tag_groups_list.append(tag_group)
+    tag_gen_params = [group_dicts,n_tags_list]
     print("finished generating tag groups, now writing to file")
-    if write_file:
-        with open(YAML_FILE_NAME, 'w') as f:
-            # write the header
-            f.write("standalone_tags: []\n")
-            f.write("tag_bundles:\n  [\n    {\n      name: 'right_wall_bundle',\n      layout:\n        [\n")
+    
+    with open(YAML_FILE_NAME, 'w') as f:
+        # write the header
+        f.write("standalone_tags: []\n")
+        f.write("tag_bundles:\n  [\n    {\n      name: all_bundles',\n      layout:\n        [\n")
+        
+        # Loop through all group lists and save in file
+        for i in range(len(tag_gen_params[0])):
+            group_dict = tag_gen_params[0][i]
+            n_tags = tag_gen_params[1][i]
+            tag_groups_list = []        
+            for id in group_dict:
+                tag_group = TagGroup(id, group_dict[id],n_tags=n_tags)
+                tag_groups_list.append(tag_group)
 
             for tag_group in tag_groups_list:
                 tag_group_str = tag_group.convert_to_str_no_formatting()
                 f.write(f"{tag_group_str},\n")
 
-            # delete the last comma and newline
-            f.seek(f.tell() - 2, 0)
-            f.truncate()
+        # delete the last comma and newline
+        f.seek(f.tell() - 2, 0)
+        f.truncate()
 
-            # write the footer
-            f.write("\n        ]\n    }\n  ]\n")
+        # write the footer
+        f.write("\n        ]\n    }\n  ]\n")
 
-            print(f"Successfully generated {YAML_FILE_NAME}")
+        print(f"Successfully generated {YAML_FILE_NAME}")
 
 if __name__ == "__main__":
-    #generate_fake_tag_locations()
     
     generate_tags_yaml(
-        write_file=True,
-        group_dict=group_locations["6tags_left"],
-        n_tags=6)
+        group_dicts = [
+            group_locations["6tags_left"],
+            group_locations["6tags_right"],
+            group_locations["2tags_left"]],
+        n_tags_list = [6,6,2])
     check_tags_yaml.check_tags_yaml()
-    generate_tags_yaml(
-        write_file=True,
-        group_dict=group_locations["6tags_right"],
-        n_tags=6)
-    check_tags_yaml.check_tags_yaml()
-    generate_tags_yaml(
-        write_file=True,
-        group_dict=group_locations["2tags_left"],
-        n_tags=2)
-    
-    check_tags_yaml.check_tags_yaml()
-    #check_tags_yaml.check_tags_yaml(YAML_FILE_NAME)
