@@ -4,6 +4,8 @@ so there are large gaps between the states, and furthermore it is hard for the m
 to look far enough into the future to get meaningful changes in the states.
 
 This file downsamples a processed csv file by removing intermediate commands until a desired sample rate is achieved.
+
+USAGE: python downsample_csv.py ../bagfiles/processed_csvs
 """
 
 import pandas as pd
@@ -18,24 +20,23 @@ def downsample_csv(directory, filename, sample_rate=10):
         Writes the downsampled csv to the same directory as the original csv, with the prefix "{Hz}hz_".
     """
     df = pd.read_csv(directory + filename)
+    df2 = df.copy()
     file_to_write = directory + f"/{sample_rate}hz_" + filename
     print(f"Downsampling from {filename} to {file_to_write}")
 
     # remove every nth command (but leave the rows where command_state_flag == 1 (original states))
-    sec_per_sample = int(1/sample_rate)
+    sec_per_sample = 1/sample_rate
     prev_time = df['time'][0]
     # loop through the rows and remove any that are less than sec_per_sample away from prev_time, unless it is a state
     for index, row in df.iterrows():
         if row['time'] - prev_time < sec_per_sample and row['command_state_flag'] != 1:
-            df = df.drop(index)
+            # print(f"Removing row {index} with time {row['time']}")
+            df2 = df2.drop(index)
         else:
             prev_time = row['time']
 
-
-
-
   # save the downsampled csv
-    df.to_csv(file_to_write, index=False)
+    df2.to_csv(file_to_write, index=False)
 
 
 if __name__ == "__main__":
