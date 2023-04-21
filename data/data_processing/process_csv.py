@@ -25,6 +25,8 @@ from scipy.spatial.transform import Rotation , RotationSpline, Slerp
 
 LARGE_TIMEGAP_THRESHHOLD = 0.1 # [s] (note that csvs are in nanoseconds by default)
 
+# TODO: Make more modular and replace vvv with data_processing_utils.py 
+
 # get cvs directory
 directory = sys.argv[1]
 if not directory.endswith("/"):
