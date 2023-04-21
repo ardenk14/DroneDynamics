@@ -46,8 +46,6 @@ OUTLIER_POSITION_THRESHHOLD = 10.0 #[m] from origin
 OUTLIER_ZSCORE_THRESHOLD = 3.0 #z-score
 
 
-
-
 def get_bagfile_csvs_directory(directory):
   # make directory for results
   results_dir = directory + "bagfile_csvs" 
@@ -77,6 +75,7 @@ def get_taggroup_dict(directory=None):
   print("Loading default taggroup_dict in process_bagfile.py")
   # keys: list of all ids in the tag group
   # values: [x,y,z,qx,qy,qz,qw] list of Global position wrt. tag with id 0
+  
   taggroup_dict = {
     (0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 
     25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 
@@ -84,6 +83,10 @@ def get_taggroup_dict(directory=None):
     61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 
     79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 
     97, 98, 99, 100, 101) : [0,0,0,0,0,0,1],
+    (102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 
+     116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 
+     130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 
+     144, 145, 146, 147) : [-1.1049, 0.6985, 0.3302, 0.0, 0.70710678, 0.0, 0.70710678],
     (0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 
     25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 
     43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 
