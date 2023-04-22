@@ -1,101 +1,103 @@
-from mppi_control.flight_controller import FlightController
-from mppi_control.cost_functions import free_flight_cost_function
+import matplotlib.pyplot as plt
+#import numpy as np
+import pandas as pd
+#from mpl_toolkits.mplot3d import Axes3D # <--- This is important for 3d plotting 
+import yaml
+import torch
 import sys
 sys.path.append('models')
-from models import ResidualDynamicsModel
-import torch
-import pandas as pd
-import matplotlib.pyplot as plt
-import numpy as np
-import imageio
-
-def plot_prospective_paths(ax, start_state, controller):
-    prospective_paths = controller.mppi.states[0]
-    costs = controller.mppi.cost_total
-    best_val, best_ind = torch.topk(costs, 10, largest=False)
-    absolute_best = torch.argmin(costs).detach().item()
-    for i in best_ind.detach():#range(len(prospective_paths)):
-        start_x = start_state[0]
-        start_y = start_state[1]
-        start_z = start_state[2]
-
-        x = np.concatenate((start_x, prospective_paths[i, :, 0].detach().numpy()), axis=0)
-        y = np.concatenate((start_y, prospective_paths[i, :, 1].detach().numpy()), axis=0)
-        z = np.concatenate((start_z, prospective_paths[i, :, 2].detach().numpy()), axis=0)
-        if i != absolute_best:
-            ax.plot(x, z, y, c='g')
-        else:
-            ax.plot(x, z, y, c='b')
-    ax.scatter(start_x, start_z, start_y, c='r', s=10)
+from models import  ResidualDynamicsModel, AbsoluteDynamicsModel
+import time
 
 
-if __name__ == '__main__':
-    CSV_FILENAME = "data/bagfiles/processed_csvs/processed_tags3_right_wallalltimes.csv"
-    index_limit = [100, 100000]
-    df = pd.read_csv(CSV_FILENAME)
-    #state = torch.tensor([[df['position.x'][index_limit[0]], df['position.y'][index_limit[0]], df['position.z'][index_limit[0]], df['R11'][index_limit[0]], df['R21'][index_limit[0]], df['R31'][index_limit[0]], df['R12'][index_limit[0]], df['R22'][index_limit[0]], df['R32'][index_limit[0]], df['vel.x'][index_limit[0]], df['vel.y'][index_limit[0]], df['vel.z'][index_limit[0]], df['ang_vel_x'][index_limit[0]], df['ang_vel_y'][index_limit[0]], df['ang_vel_z'][index_limit[0]]]], dtype=torch.float32).numpy()
-    state = torch.tensor([[df['position.x'][index_limit[0]], df['position.y'][index_limit[0]], df['position.z'][index_limit[0]], df['vel.x'][index_limit[0]], df['vel.y'][index_limit[0]], df['vel.z'][index_limit[0]], df['ang_vel_x'][index_limit[0]], df['ang_vel_y'][index_limit[0]], df['ang_vel_z'][index_limit[0]], df['roll'][index_limit[0]], df['pitch'][index_limit[0]], df['yaw'][index_limit[0]]]], dtype=torch.float32).numpy()
+"""
+Visualize the drone position and orientation data from a CSV file.
+Also plot model predictions.
+usage: first change filename to plot
+python3 plot_dataset.py
+"""
+CSV_FILENAME = "data/50hz_processed_tags3_right_wall1681856871.257578_1681856949.932647.csv" #../data/processed_tags3_right_wall_commands_states.csv"
+TAG_FILENAME = "april_tags/tags_all.yaml"
 
-    print("Starting State: ", state[0, :3])
+def plot_trajectory(model, filename, tags_filename, index_limit=None, reset_state=False):
+    df = pd.read_csv(filename)
 
-    start_state = [np.array([state[0, 0]]), np.array([state[0, 1]]), np.array([state[0, 2]])]
+    if index_limit is None:
+        index_limit = [0, len(df)]
 
-    state_dim = 12
-    action_dim = 4
-    model = ResidualDynamicsModel(state_dim, action_dim)
-    model.load_state_dict(torch.load('models/multistep_residual_model.pt'))
-    model.eval()
-    #model.cpu()
-    controller = FlightController(model, free_flight_cost_function)
+    results = []
+    #state = torch.tensor([[df['position.x'][index_limit[0]], df['position.y'][index_limit[0]], df['position.z'][index_limit[0]], df['R11'][index_limit[0]], df['R21'][index_limit[0]], df['R31'][index_limit[0]], df['R12'][index_limit[0]], df['R22'][index_limit[0]], df['R32'][index_limit[0]], df['vel.x'][index_limit[0]], df['vel.y'][index_limit[0]], df['vel.z'][index_limit[0]], df['ang_vel_x'][index_limit[0]], df['ang_vel_y'][index_limit[0]], df['ang_vel_z'][index_limit[0]]]], dtype=torch.float32)
+    state = torch.tensor([[df['position.x'][index_limit[0]], df['position.y'][index_limit[0]], df['position.z'][index_limit[0]], df['vel.x'][index_limit[0]], df['vel.y'][index_limit[0]], df['vel.z'][index_limit[0]], df['ang_vel_x'][index_limit[0]], df['ang_vel_y'][index_limit[0]], df['ang_vel_z'][index_limit[0]], df['roll'][index_limit[0]], df['pitch'][index_limit[0]], df['yaw'][index_limit[0]]]], dtype=torch.float32)
+    with torch.no_grad():
+        for i in range(index_limit[0], index_limit[1]):
+            if reset_state:
+                #state = torch.tensor([[df['position.x'][i], df['position.y'][i], df['position.z'][i], df['R11'][i], df['R21'][i], df['R31'][i], df['R12'][i], df['R22'][i], df['R32'][i], df['vel.x'][i], df['vel.y'][i], df['vel.z'][i], df['ang_vel_x'][i], df['ang_vel_y'][i], df['ang_vel_z'][i]]], dtype=torch.float32)
+                state = torch.tensor([[df['position.x'][i], df['position.y'][i], df['position.z'][i], df['vel.x'][i], df['vel.y'][i], df['vel.z'][i], df['ang_vel_x'][i], df['ang_vel_y'][i], df['ang_vel_z'][i], df['roll'][i], df['pitch'][i], df['yaw'][i]]], dtype=torch.float32)
 
+            action = torch.tensor([[df['commands[0]'][i], df['commands[1]'][i], df['commands[2]'][i], df['commands[3]'][i]]], dtype=torch.float32)
+
+            result = model(state, action)
+            results.append(result.cpu().detach().numpy()[0])
+            state = result
+
+    with open(tags_filename, 'r') as f:
+        data = yaml.safe_load(f)
+
+    
+    # Plot the position
+    print("Plotting...")
     fig = plt.figure()
     ax = fig.add_subplot(projection='3d')
-    #ax.set_aspect('equal')
-    ax.axes.set_xlim3d(left=-2, right=2) 
-    ax.axes.set_ylim3d(bottom=0, top=4) 
-    ax.axes.set_zlim3d(bottom=-1, top=2) 
+    # Extract x,y,z location for each id number and plot it
+    for bundle in data['tag_bundles']:
+        for tag in bundle['layout']:
+            id_num = tag['id']
+            x = tag['x']
+            y = tag['y']
+            z = tag['z']
+            if x > -1.0:
+                ax.scatter(x, z, y, c='r', s=8)
+
+    if index_limit:
+        ax.plot(df["position.x"][index_limit[0]:index_limit[1]], df["position.z"][index_limit[0]:index_limit[1]], df["position.y"][index_limit[0]:index_limit[1]], label="True Path")
+    else:
+        ax.plot(df["position.x"], df["position.z"], df["position.y"])
+
+    ax.plot([i[0] for i in results], [i[2] for i in results], [i[1] for i in results], label="Predicted Path")
+    
     ax.set_xlabel("x")
     ax.set_ylabel("z")
     ax.set_zlabel("y")
+    ax.set_title("Position Prediction with State Replacement")
+    ax.legend()
+    plt.show()
 
-    x_lst = []
-    y_lst = []
-    z_lst = []
-    frames = []
-    for i in range(10000):
-        #print("STATE: ", state)
-        action = controller.control(state)
+    #print("RESULTS: ", results)
 
-        state = torch.from_numpy(state)
-        action = torch.from_numpy(action).reshape((-1, action.shape[0]))
+if __name__ == "__main__":
+    print("Hello and welcome abord drone flight 498!")
+    print("")
+    time.sleep(3)
+    print("For today's flight, we will see how the drone dynamics model is able to follow the ground truth path with state replacement.")
+    print("")
+    time.sleep(5)
+    print("Approximate flight time: 20 seconds.")
+    print("")
+    time.sleep(3)
+    print("Enjoy the ride!")
+    print("")
+    time.sleep(3)
+    print("The red dots represent the april tags on the main wall.")
+    print("The blue curve is the ground truth path that the drone flew in our test set data.")
+    print("The orange curve is the predicted next states with state replacement.")
+    print("")
 
-        next_state = model(state, action)
 
-        # TODO: Add randomness to next state: Model_prediction + epsilon where epsilon is fron N(0, Sigma)
-
-        if i % 100 == 0:
-            plot_prospective_paths(ax, start_state, controller)
-            ax.plot(x_lst, z_lst, y_lst, c='r')
-
-            # Save the current frame as an image file
-            filename = f"frames/frame_{i:03d}.png"
-            plt.savefig(filename)
-            
-            # Add the frame to the list
-            frames.append(imageio.imread(filename))
-
-        state = next_state.detach().numpy()
-        start_state = [np.array([state[0, 0]]), np.array([state[0, 1]]), np.array([state[0, 2]])]
-
-        x_lst.append(state[0, 0])
-        y_lst.append(state[0, 1])
-        z_lst.append(state[0, 2])
-
-    #ax.plot(x_lst, z_lst, y_lst, c='r')
-    #plt.show()
-
-print("Creating animation...")
-imageio.mimsave("animation.gif", frames, fps=10)
-plt.close()
-print("Done!")
-
+    state_dim = 12
+    action_dim = 4
+    #model = AbsoluteDynamicsModel(state_dim, action_dim)
+    #model.load_state_dict(torch.load('multistep_absolute_model.pt'))
+    model = ResidualDynamicsModel(state_dim, action_dim)
+    model.load_state_dict(torch.load('models/multistep_residual_model.pt'))
+    model.eval()
+    plot_trajectory(model, CSV_FILENAME, TAG_FILENAME, [0,200], reset_state=True) #[10000,14000]

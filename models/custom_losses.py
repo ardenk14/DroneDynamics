@@ -19,7 +19,7 @@ class SingleStepLoss(nn.Module):
 
 class MultiStepLoss(nn.Module):
 
-    def __init__(self, loss_fn, discount=0.99):
+    def __init__(self, loss_fn, discount=0.8):
         super().__init__()
         self.loss = loss_fn
         self.discount = discount

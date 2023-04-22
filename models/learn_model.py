@@ -101,11 +101,11 @@ if __name__ == '__main__':
         r"../data/50hz_processed_tags2_right_wall1681856454.295917_1681856489.001135.csv",
         r"../data/50hz_processed_tags2_right_wall1681856531.591236_1681856538.807909.csv",
         r"../data/50hz_processed_tags3_right_wall1681856774.1_1681856865.920745.csv",
-        r"../data/50hz_processed_tags3_right_wall1681856871.257578_1681856949.932647.csv",
+        #r"../data/50hz_processed_tags3_right_wall1681856871.257578_1681856949.932647.csv",
         r"../data/50hz_processed_tags3_right_wall1681856954.754664_1681857018.73437.csv"
     ]
     # TODO: Setup data file
-    train_loader, val_loader = load_data.get_dataloader_drone_multi_step(data_filepaths, num_steps=5) #get_dataloader('data.npz')
+    train_loader, val_loader = load_data.get_dataloader_drone_multi_step(data_filepaths, num_steps=4) #get_dataloader('data.npz')
     #print("train loader: ", train_loader)
 
     # Create model
@@ -117,7 +117,7 @@ if __name__ == '__main__':
     # Train forward model
     pose_loss = nn.MSELoss()
     pose_loss = MultiStepLoss(pose_loss, discount=0.9)
-    train_losses, val_losses = train_model(model, train_loader, val_loader, pose_loss, num_epochs=100, lr=0.01)
+    train_losses, val_losses = train_model(model, train_loader, val_loader, pose_loss, num_epochs=1000, lr=0.001)
 
     # Save the model
     print("Saving...")
@@ -126,6 +126,10 @@ if __name__ == '__main__':
     print("Saved at multistep_residual_model.pt")
 
     # Plot forward only losses
-    plt.plot([i for i in range(len(train_losses))], train_losses)
-    plt.plot([i for i in range(len(val_losses))], val_losses)
+    plt.plot([i for i in range(len(train_losses))], train_losses, label="Training Loss")
+    plt.plot([i for i in range(len(val_losses))], val_losses, label="Validation Loss")
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.legend()
+    plt.title("Training vs. Validation Loss")
     plt.show()
