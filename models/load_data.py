@@ -3,7 +3,7 @@ from torch.utils.data import Dataset, DataLoader, random_split
 import numpy as np
 import pdb
 
-def get_dataloader_drone_multi_step(data_filepath, batch_size=500, train_test=[0.8,0.2], chunk_size=1000, num_steps=4):
+def get_dataloader_drone_multi_step(data_filepath, batch_size=500, train_test=[0.8,0.2], chunk_size=100, num_steps=4):
     """
     """
     d_set = DroneMultiStepDynamicsDataset(data_filepath, chunk_size, num_steps=num_steps)
@@ -64,7 +64,8 @@ class DroneMultiStepDynamicsDataset(Dataset):
             # Split the data into trajectories of length trajectory_chunk_length
             while i <= len(full_csv) - trajectory_chunk_length:
                 commands = torch.from_numpy(full_csv[i:i+trajectory_chunk_length-1, 1:5]) #(trajectory_chunk_length, 4)
-                states = torch.from_numpy(full_csv[i:i+trajectory_chunk_length, 5:20])
+                indices = [5, 6, 7, 14, 15, 16, 17, 18, 19, 21, 22, 23]
+                states = torch.from_numpy(full_csv[i:i+trajectory_chunk_length, indices])#5:20])
                 # 15-dimensional state space: position (x,y,z), angular position (first two columns of 3x3 rotation matrix), linear velocity (x,y,z), angular velocity (roll, pitch, yaw)                                      
                 
                 self.data.append({'states': states.to(self.device), #position (x,y,z)
@@ -222,9 +223,15 @@ def get_dataloader_multi_step(data_fp, batch_size=500):
 
 if __name__ == "__main__":
     data_filepaths = [
-        r"../data/processed_tags2_right_wall1681856256.2356164_1681856260.4683304.csv",
-        r"../data/processed_tags2_right_wall1681856264.1351044_1681856271.0596986.csv",
-        r"../data/processed_tags3_right_wallalltimes.csv"
+        r"../data/50hz_processed_tags2_right_wall1681856256.2356164_1681856260.4683304.csv",
+        r"../data/50hz_processed_tags2_right_wall1681856259.673429_1681856345.057893.csv",
+        r"../data/50hz_processed_tags2_right_wall1681856264.1351044_1681856271.0596986.csv",
+        r"../data/50hz_processed_tags2_right_wall1681856362.371829_1681856418.62231.csv",
+        r"../data/50hz_processed_tags2_right_wall1681856454.295917_1681856489.001135.csv",
+        r"../data/50hz_processed_tags2_right_wall1681856531.591236_1681856538.807909.csv",
+        r"../data/50hz_processed_tags3_right_wall1681856774.1_1681856865.920745.csv",
+        r"../data/50hz_processed_tags3_right_wall1681856871.257578_1681856949.932647.csv",
+        r"../data/50hz_processed_tags3_right_wall1681856954.754664_1681857018.73437.csv"
     ]
     chunk_size = 500
     dataset = DroneMultiStepDynamicsDataset(data_filepaths, chunk_size)

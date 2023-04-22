@@ -1,7 +1,7 @@
-from flight_controller import FlightController
-from cost_functions import free_flight_cost_function
+from mppi_control.flight_controller import FlightController
+from mppi_control.cost_functions import free_flight_cost_function
 import sys
-sys.path.append('../models')
+sys.path.append('models')
 from models import ResidualDynamicsModel
 import torch
 import pandas as pd
@@ -30,18 +30,20 @@ def plot_prospective_paths(ax, start_state, controller):
 
 
 if __name__ == '__main__':
-    CSV_FILENAME = "../data/bagfiles/processed_csvs/processed_tags3_right_wallalltimes.csv"
+    CSV_FILENAME = "data/bagfiles/processed_csvs/processed_tags3_right_wallalltimes.csv"
     index_limit = [100, 100000]
     df = pd.read_csv(CSV_FILENAME)
-    state = torch.tensor([[df['position.x'][index_limit[0]], df['position.y'][index_limit[0]], df['position.z'][index_limit[0]], df['R11'][index_limit[0]], df['R21'][index_limit[0]], df['R31'][index_limit[0]], df['R12'][index_limit[0]], df['R22'][index_limit[0]], df['R32'][index_limit[0]], df['vel.x'][index_limit[0]], df['vel.y'][index_limit[0]], df['vel.z'][index_limit[0]], df['ang_vel_x'][index_limit[0]], df['ang_vel_y'][index_limit[0]], df['ang_vel_z'][index_limit[0]]]], dtype=torch.float32).numpy()
+    #state = torch.tensor([[df['position.x'][index_limit[0]], df['position.y'][index_limit[0]], df['position.z'][index_limit[0]], df['R11'][index_limit[0]], df['R21'][index_limit[0]], df['R31'][index_limit[0]], df['R12'][index_limit[0]], df['R22'][index_limit[0]], df['R32'][index_limit[0]], df['vel.x'][index_limit[0]], df['vel.y'][index_limit[0]], df['vel.z'][index_limit[0]], df['ang_vel_x'][index_limit[0]], df['ang_vel_y'][index_limit[0]], df['ang_vel_z'][index_limit[0]]]], dtype=torch.float32).numpy()
+    state = torch.tensor([[df['position.x'][index_limit[0]], df['position.y'][index_limit[0]], df['position.z'][index_limit[0]], df['vel.x'][index_limit[0]], df['vel.y'][index_limit[0]], df['vel.z'][index_limit[0]], df['ang_vel_x'][index_limit[0]], df['ang_vel_y'][index_limit[0]], df['ang_vel_z'][index_limit[0]], df['roll'][index_limit[0]], df['pitch'][index_limit[0]], df['yaw'][index_limit[0]]]], dtype=torch.float32).numpy()
+
     print("Starting State: ", state[0, :3])
 
     start_state = [np.array([state[0, 0]]), np.array([state[0, 1]]), np.array([state[0, 2]])]
 
-    state_dim = 15
+    state_dim = 12
     action_dim = 4
     model = ResidualDynamicsModel(state_dim, action_dim)
-    model.load_state_dict(torch.load('../models/multistep_residual_model.pt'))
+    model.load_state_dict(torch.load('models/multistep_residual_model.pt'))
     model.eval()
     #model.cpu()
     controller = FlightController(model, free_flight_cost_function)
@@ -60,7 +62,7 @@ if __name__ == '__main__':
     y_lst = []
     z_lst = []
     frames = []
-    for i in range(1000):
+    for i in range(10000):
         #print("STATE: ", state)
         action = controller.control(state)
 
@@ -71,7 +73,7 @@ if __name__ == '__main__':
 
         # TODO: Add randomness to next state: Model_prediction + epsilon where epsilon is fron N(0, Sigma)
 
-        if i % 50 == 0:
+        if i % 100 == 0:
             plot_prospective_paths(ax, start_state, controller)
             ax.plot(x_lst, z_lst, y_lst, c='r')
 

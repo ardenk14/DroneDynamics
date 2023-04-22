@@ -1,4 +1,6 @@
 import torch
+import sys
+sys.path.append('mppi_control')
 from mppi import MPPI
 import numpy as np
 
@@ -11,6 +13,7 @@ class FlightController(object):
         #self.env = env
         self.model = model
         self.target_state = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=np.float32)
+        self.target_state = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=np.float32)
         # MPPI Hyperparameters:
         # --- You may need to tune them
         state_dim = None #env.observation_space.shape[0]
