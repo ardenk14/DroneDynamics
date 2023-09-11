@@ -204,8 +204,8 @@ class MPPI():
         return self.F(state, u, t) if self.step_dependency else self.F(state, u)
 
     @handle_batch_input(n=2)
-    def _running_cost(self, state, u):
-        return self.running_cost(state, u)
+    def _running_cost(self, state, u, prev_action=None):
+        return self.running_cost(state, u, prev_action=prev_action)
 
     def command(self, state):
         """
@@ -260,14 +260,16 @@ class MPPI():
 
         states = []
         actions = []
+        last_action = None
         for t in range(T):
             u = self.u_scale * perturbed_actions[:, t].repeat(self.M, 1, 1)
             state = self._dynamics(state, u, t)
-            c = self._running_cost(state, u)
+            c = self._running_cost(state, u, prev_action=last_action)
             cost_samples += c
             if self.M > 1:
                 cost_var += c.var(dim=0) * (self.rollout_var_discount ** t)
 
+            last_action = u
             # Save total states/actions
             states.append(state)
             actions.append(u)

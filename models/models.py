@@ -52,11 +52,12 @@ class ResidualDynamicsModel(nn.Module):
 
         self.model =  nn.Sequential(
           nn.BatchNorm1d(self.state_dim + self.action_dim),
-          nn.Linear(self.state_dim + self.action_dim, 100),
+          nn.Linear(self.state_dim + self.action_dim, 200),
           nn.ReLU(),
-          nn.Linear(100, 100),
+          #nn.Dropout(p=0.2),
+          nn.Linear(200, 200),
           nn.ReLU(),
-          nn.Linear(100, self.state_dim)
+          nn.Linear(200, self.state_dim)
         )#.to(self.device)
 
     def forward(self, state, action):

@@ -228,7 +228,6 @@ def process_all_bagfiles(directory, filenames, results_dir, times_to_keep_dict, 
         
 
 if __name__ == "__main__":
-  directory, filenames = get_directory_and_filenames(".bag")
   results_dir = get_bagfile_csvs_directory(directory)
   times_to_keep_dict = get_times_to_keep_dict(directory)
   taggroup_dict = get_taggroup_dict(directory)

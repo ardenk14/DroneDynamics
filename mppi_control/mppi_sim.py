@@ -30,16 +30,22 @@ def plot_prospective_paths(ax, start_state, controller):
 
 
 if __name__ == '__main__':
-    CSV_FILENAME = "../data/bagfiles/processed_csvs/processed_tags3_right_wallalltimes.csv"
-    index_limit = [100, 100000]
-    df = pd.read_csv(CSV_FILENAME)
-    state = torch.tensor([[df['position.x'][index_limit[0]], df['position.y'][index_limit[0]], df['position.z'][index_limit[0]], df['R11'][index_limit[0]], df['R21'][index_limit[0]], df['R31'][index_limit[0]], df['R12'][index_limit[0]], df['R22'][index_limit[0]], df['R32'][index_limit[0]], df['vel.x'][index_limit[0]], df['vel.y'][index_limit[0]], df['vel.z'][index_limit[0]], df['ang_vel_x'][index_limit[0]], df['ang_vel_y'][index_limit[0]], df['ang_vel_z'][index_limit[0]]]], dtype=torch.float32).numpy()
+    #CSV_FILENAME = "../data/bagfiles/processed_csvs/processed_tags3_right_wallalltimes.csv"
+    #index_limit = [100, 100000]
+    #df = pd.read_csv(CSV_FILENAME)
+    #state = torch.tensor([[df['position.x'][index_limit[0]], df['position.y'][index_limit[0]], df['position.z'][index_limit[0]], df['R11'][index_limit[0]], df['R21'][index_limit[0]], df['R31'][index_limit[0]], df['R12'][index_limit[0]], df['R22'][index_limit[0]], df['R32'][index_limit[0]], df['vel.x'][index_limit[0]], df['vel.y'][index_limit[0]], df['vel.z'][index_limit[0]], df['ang_vel_x'][index_limit[0]], df['ang_vel_y'][index_limit[0]], df['ang_vel_z'][index_limit[0]]]], dtype=torch.float32).numpy()
+    
+    npz_fp = "../data/Bag1_start0.15_6.npz"
+    npz_data = np.load(npz_fp)
+    state = torch.tensor([npz_data['data'][0, :12]], dtype=torch.float32).numpy()
+
+    
     print("Starting State: ", state[0, :3])
 
     start_state = [np.array([state[0, 0]]), np.array([state[0, 1]]), np.array([state[0, 2]])]
 
-    state_dim = 15
-    action_dim = 4
+    state_dim = 12#15
+    action_dim = 16#4
     model = ResidualDynamicsModel(state_dim, action_dim)
     model.load_state_dict(torch.load('../models/multistep_residual_model.pt'))
     model.eval()
@@ -60,18 +66,20 @@ if __name__ == '__main__':
     y_lst = []
     z_lst = []
     frames = []
-    for i in range(1000):
+    for i in range(100):
         #print("STATE: ", state)
         action = controller.control(state)
 
         state = torch.from_numpy(state)
         action = torch.from_numpy(action).reshape((-1, action.shape[0]))
 
+        #print("GOT HERE")
         next_state = model(state, action)
+        print("Next States: ", next_state)
 
         # TODO: Add randomness to next state: Model_prediction + epsilon where epsilon is fron N(0, Sigma)
 
-        if i % 50 == 0:
+        if i % 1 == 0:
             plot_prospective_paths(ax, start_state, controller)
             ax.plot(x_lst, z_lst, y_lst, c='r')
 

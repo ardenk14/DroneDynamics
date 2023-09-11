@@ -68,7 +68,7 @@ def plot_trajectory(model, filename, tags_filename, index_limit=None, reset_stat
     ax.set_xlabel("x")
     ax.set_ylabel("z")
     ax.set_zlabel("y")
-    ax.set_title("Position Prediction with State Replacement")
+    ax.set_title("Position Prediction without State Replacement")
     ax.legend()
     plt.show()
 
@@ -100,4 +100,4 @@ if __name__ == "__main__":
     model = ResidualDynamicsModel(state_dim, action_dim)
     model.load_state_dict(torch.load('models/multistep_residual_model.pt'))
     model.eval()
-    plot_trajectory(model, CSV_FILENAME, TAG_FILENAME, [0,200], reset_state=True) #[10000,14000]
+    plot_trajectory(model, CSV_FILENAME, TAG_FILENAME, [0,20], reset_state=False) #[10000,14000]

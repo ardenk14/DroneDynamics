@@ -87,37 +87,29 @@ def train_model(model, train_dataloader, val_dataloader, loss_fcn, num_epochs=10
 
 # TODO: Take command arguments to give a file to save in or read from
 if __name__ == '__main__':
-    print("DEVICE: ", device)
-    '''data_filepaths = [
-        r"../data/50hz_processed_tags2_right_wall1681856256.2356164_1681856260.4683304.csv",
-        r"../data/50hz_processed_tags2_right_wall1681856264.1351044_1681856271.0596986.csv",
-        r"../data/50hz_processed_tags3_right_wallalltimes.csv"
-    ]'''
-    data_filepaths = [
-        r"../data/50hz_processed_tags2_right_wall1681856256.2356164_1681856260.4683304.csv",
-        r"../data/50hz_processed_tags2_right_wall1681856259.673429_1681856345.057893.csv",
-        r"../data/50hz_processed_tags2_right_wall1681856264.1351044_1681856271.0596986.csv",
-        r"../data/50hz_processed_tags2_right_wall1681856362.371829_1681856418.62231.csv",
-        r"../data/50hz_processed_tags2_right_wall1681856454.295917_1681856489.001135.csv",
-        r"../data/50hz_processed_tags2_right_wall1681856531.591236_1681856538.807909.csv",
-        r"../data/50hz_processed_tags3_right_wall1681856774.1_1681856865.920745.csv",
-        #r"../data/50hz_processed_tags3_right_wall1681856871.257578_1681856949.932647.csv",
-        r"../data/50hz_processed_tags3_right_wall1681856954.754664_1681857018.73437.csv"
-    ]
+    print("DEVICE: ", device)    
+
+    data_filepaths = []
+    for i in ['0.15', '0.16', '0.17', '0.18', '0.19', '0.21', '0.23']:
+        for j in range(19):
+            data_filepaths.append("../data/Bag1_start" + i + "_" + str(j) + ".npz")
+        for j in range(19):
+            data_filepaths.append("../data/Bag2_start" + i + "_" + str(j) + ".npz")
     # TODO: Setup data file
-    train_loader, val_loader = load_data.get_dataloader_drone_multi_step(data_filepaths, num_steps=4) #get_dataloader('data.npz')
+    train_loader, val_loader = load_data.get_dataloader_multi_step(data_filepaths, num_steps=5) #get_dataloader('data.npz')
     #print("train loader: ", train_loader)
 
     # Create model
     state_dim = 12 # TODO: have dataloader function return these dimensions
-    action_dim = 4
+    action_dim = 16
     model = ResidualDynamicsModel(state_dim, action_dim).to(device)
+    #model.load_state_dict(torch.load("multistep_residual_model.pt")) # To train a pre-trained network
     #model = AbsoluteDynamicsModel(state_dim, action_dim).to(device)
 
     # Train forward model
-    pose_loss = nn.MSELoss()
-    pose_loss = MultiStepLoss(pose_loss, discount=0.9)
-    train_losses, val_losses = train_model(model, train_loader, val_loader, pose_loss, num_epochs=1000, lr=0.001)
+    pose_lss = nn.MSELoss()
+    pose_loss = MultiStepLoss(pose_lss, discount=0.95)
+    train_losses, val_losses = train_model(model, train_loader, val_loader, pose_loss, num_epochs=5000, lr=0.001)
 
     # Save the model
     print("Saving...")

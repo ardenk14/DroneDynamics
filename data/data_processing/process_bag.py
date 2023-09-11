@@ -46,15 +46,35 @@ from cv_bridge import CvBridge, CvBridgeError
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from scipy.spatial.transform import RotationSpline, Slerp
+from scipy.interpolate import CubicSpline
 
 #OUTLIER_POSITION_THRESHHOLD = 10.0 #[m] from origin
 #OUTLIER_ZSCORE_THRESHOLD = 3.0 #z-score
 
 # Bag you are processing (used to name data files)
-bag_name = "Bag1"
+bag_name = "Bag2"
 # Adjust to augment the data by determining what time in the trajectory to grab the first state from (also used to name data files)
 # bag 1 range from 0.1-
-start = 0.1
+start = 0.23
+
+times_to_keep = [
+    [1681856774.10000000,1681856865.920745],
+    [1681856871.257578,1681856949.932647],
+    [1681856954.754664,1681857018.734370],
+    [1681857033.623604,1681857048.747123],
+    [1681857050.747123,1681857066.054564]
+  ] # Bag 2
+
+"""times_to_keep = [
+    [1681856259.673429,1681856345.057893],
+    [1681856362.371829,1681856418.622310],
+    [1681856422.282990,1681856441.548096],
+    [1681856454.295917,1681856489.001135],
+    [1681856492.060368,1681856521.446196],
+    [1681856524.445549,1681856530.332566],
+    [1681856531.591236,1681856538.807909],
+    [1681856539.824715,1681856560.707723]
+  ] # Bag 1"""
 
 
 def get_bagfile_csvs_directory(directory):
@@ -200,8 +220,8 @@ def write_bagfile_to_csv(directory, filename, csv_filepath, taggroup_dict, start
 
     for topic, message, timestamp in bag.read_messages(topics=['/sent_drone_commands', '/tag_detections', '/tag_detections_image'], start_time=start_time, end_time=end_time):
       t = timestamp.to_sec()
-      #if t >= 1681856800:
-      #  break
+      if in_range(t, times_to_keep) is None:
+        continue
       if topic=='/sent_drone_commands' or topic=='sent_drone_commands':
         pass
 #       /sent_drone_commands  std_msgs/UInt8MultiArray
@@ -296,14 +316,14 @@ def write_bagfile_to_csv(directory, filename, csv_filepath, taggroup_dict, start
             cnt += 1
       elif topic=='/tag_detections_image' or topic=='tag_detections_image':
         pass
-        """print("Image: ", str(t))
+        print("Image: ", str(t))
         # TODO: ROS bridge to get image
         #if len(time_inner) != 0 and time_inner[-1] - t < 0.005:
-        if t > 1681856294.26 and t < 1681856298.9:
+        if True:
           img = br.imgmsg_to_cv2(message)
-          images.append(img)
-          #cv2.imshow("image", img)
-          #cv2.waitKey(1000)"""
+          #images.append(img)
+          cv2.imshow("image", img)
+          cv2.waitKey(1)
 
   print("SECOND LOOP THROUGH")
   print("-------------------------------------------------------------------------------------------------------------")
@@ -341,33 +361,26 @@ def write_bagfile_to_csv(directory, filename, csv_filepath, taggroup_dict, start
   final_state_times = [] # List showing the states for each accepted path
   firsts = [] # List showing the starting time for each accepted path
   final_states = []
-  spacing = 0.2
+  spacing = 0.1
   #start = 0.1
   for i in range(len(pos_x)):
     if len(pos_x[i]) >= 10:
+      #fig = plt.figure()
+      #ax = fig.add_subplot(projection='3d')
+      #ax.plot(pos_x[i], pos_y[i], pos_z[i], label="True Path")
+      #ax.scatter(pos_x[i], pos_y[i], pos_z[i])
+      
+
       first = tim[i][0]
       firsts.append(first)
       final_state_times.append([i - first for i in tim[i]])
 
-      # Perform linear regression using numpy's polyfit
-      coefficients_x = np.polyfit(final_state_times[-1], pos_x[i], len(pos_x[i]))
-      coefficients_y = np.polyfit(final_state_times[-1], pos_y[i], len(pos_y[i]))
-      coefficients_z = np.polyfit(final_state_times[-1], pos_z[i], len(pos_z[i]))
-
-      dx = np.polyder(coefficients_x, 1)
-      dy = np.polyder(coefficients_y, 1)
-      dz = np.polyder(coefficients_z, 1)
-
+      spline = CubicSpline(final_state_times[-1], np.array([pos_x[i], pos_y[i], pos_z[i]]), axis=1)
       
       stop = final_state_times[-1][-1]
 
-      # TODO: Get angular position and velocity at the same times
-      states_x = np.polyval(coefficients_x, np.arange(start, stop, spacing))
-      states_y = np.polyval(coefficients_y, np.arange(start, stop, spacing))
-      states_z = np.polyval(coefficients_z, np.arange(start, stop, spacing))
-      states_dx = np.polyval(dx, np.arange(start, stop, spacing))
-      states_dy = np.polyval(dy, np.arange(start, stop, spacing))
-      states_dz = np.polyval(dz, np.arange(start, stop, spacing))
+      states_x, states_y, states_z = spline(np.arange(start, stop, spacing), 0)
+      states_dx, states_dy, states_dz = spline(np.arange(start, stop, spacing), 1)
 
       orients = R.from_matrix(rots[i])
       spline = RotationSpline(final_state_times[-1], orients)
@@ -376,12 +389,15 @@ def write_bagfile_to_csv(directory, filename, csv_filepath, taggroup_dict, start
 
       #print("ANG: ", angs)
       #print("ANG VEL: ", ang_vel)
-      #print("STATES: ", states_x)
+      print("STATES: ", states_x)
 
       final_state = np.vstack((states_x, states_y, states_z, states_dx, states_dy, states_dz, angs[:, 0], angs[:, 1], angs[:, 2], ang_vel[:, 0], ang_vel[:, 1], ang_vel[:, 2])).T
       print("STATES SHAPE: ", final_state.shape)
       print("STATES: ", final_state)
       final_states.append(final_state)
+
+      #ax.plot(states_x, states_y, states_z)
+      #plt.show()
   
   # TODO: For each state you created, fit a poly to the commands leading to the next state and save coefficients as the action pair
   cnt = 0
@@ -390,6 +406,8 @@ def write_bagfile_to_csv(directory, filename, csv_filepath, taggroup_dict, start
   split_cmd2 = []
   split_cmd3 = []
   split_cmd4 = []
+  print("tim length: ", len(tim))
+  print("X pos length: ", len(pos_x))
   for i in range(len(tim)):
     if tim[i][0] in firsts:
       print("SEQUENCE: ", len(tim[i]))
@@ -424,7 +442,8 @@ def write_bagfile_to_csv(directory, filename, csv_filepath, taggroup_dict, start
           all_cmd3[-1].append(cmd_3[i][j])
           all_cmd4[-1].append(cmd_4[i][j])
         last_step = step
-      print("ALL STEPS: ", all_steps)
+      #print("ALL STEPS: ", all_steps)
+      #print("ALL THRUSTS: ", all_cmd1)
       split_cmd_times.append(all_cmd_times)
       split_cmd1.append(all_cmd1)
       split_cmd2.append(all_cmd2)
@@ -440,33 +459,51 @@ def write_bagfile_to_csv(directory, filename, csv_filepath, taggroup_dict, start
       #actions[-1].append([])
       base_t = split_cmd_times[i][j][0]
       times = [k - base_t for k in split_cmd_times[i][j]]
-      #fig1, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
-      #ax1.scatter(times, split_cmd1[i][j], s=1)
-      #ax2.scatter(times, split_cmd2[i][j], s=1)
-      #ax3.scatter(times, split_cmd3[i][j], s=1)
-      #ax4.scatter(times, split_cmd4[i][j], s=1)
+      
 
-      coeff_1 = np.polyfit(times, split_cmd1[i][j], 5)
-      coeff_2 = np.polyfit(times, split_cmd2[i][j], 5)
-      coeff_3 = np.polyfit(times, split_cmd3[i][j], 5)
-      coeff_4 = np.polyfit(times, split_cmd4[i][j], 5)
+      print("NUMBER OF TIMES: ", len(times))
+      print("TIME DIFF: ", times[-1])
+
+      # TODO: Handle the case where there are not enough points
+      if len(times) > 1:
+        coeff_1 = np.polyfit(times, split_cmd1[i][j], 3)
+        coeff_2 = np.polyfit(times, split_cmd2[i][j], 3)
+        coeff_3 = np.polyfit(times, split_cmd3[i][j], 3)
+        coeff_4 = np.polyfit(times, split_cmd4[i][j], 3)
+      else:
+        coeff_1 = [0.0, 0.0, split_cmd1[i][j][0]]
+        coeff_2 = [0.0, 0.0, split_cmd2[i][j][0]]
+        coeff_3 = [0.0, 0.0, split_cmd3[i][j][0]]
+        coeff_4 = [0.0, 0.0, split_cmd4[i][j][0]]
+
+      #actions[-1].append(list(coeff_1) + list(coeff_2) + list(coeff_3) + list(coeff_4))
+
+      new_times = np.linspace(0, spacing, 20) # 60 1/4 total num actions
+
+      fitted_line_1 = np.round(np.polyval(coeff_1, new_times))
+      fitted_line_2 = np.round(np.polyval(coeff_2, new_times))
+      fitted_line_3 = np.round(np.polyval(coeff_3, new_times))
+      fitted_line_4 = np.round(np.polyval(coeff_4, new_times))
 
       actions[-1].append(list(coeff_1) + list(coeff_2) + list(coeff_3) + list(coeff_4))
+      #actions[-1].append(list(fitted_line_1) + list(fitted_line_2) + list(fitted_line_3) + list(fitted_line_4))
 
-      #fitted_line_1 = np.round(np.polyval(coeff_1, times))
-      #fitted_line_2 = np.round(np.polyval(coeff_2, times))
-      #fitted_line_3 = np.round(np.polyval(coeff_3, times))
-      #fitted_line_4 = np.round(np.polyval(coeff_4, times))
+      """if True: #times[-1] <= 0.03:
+        fig1, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
+        ax1.scatter(times, split_cmd1[i][j], s=1)
+        ax2.scatter(times, split_cmd2[i][j], s=1)
+        ax3.scatter(times, split_cmd3[i][j], s=1)
+        ax4.scatter(times, split_cmd4[i][j], s=1)
 
-      #ax1.plot(times, fitted_line_1, 'orange', label='Fitted Line')
-      #ax2.plot(times, fitted_line_2, 'orange', label='Fitted Line')
-      #ax3.plot(times, fitted_line_3, 'orange', label='Fitted Line')
-      #ax4.plot(times, fitted_line_4, 'orange', label='Fitted Line')
+        ax1.scatter(new_times, fitted_line_1, c='orange', label='Fitted Line')
+        ax2.scatter(new_times, fitted_line_2, c='orange', label='Fitted Line')
+        ax3.scatter(new_times, fitted_line_3, c='orange', label='Fitted Line')
+        ax4.scatter(new_times, fitted_line_4, c='orange', label='Fitted Line')
 
-      #title = "Sequence " + str(i) + ", Step " + str(j)
-      #fig1.suptitle(title)
-      #plt.show()
-  print("ACTIONS: ", actions)
+        title = "Sequence " + str(i) + ", Step " + str(j)
+        fig1.suptitle(title)
+        plt.show()"""
+  #print("ACTIONS: ", actions)
         
       # Times for each sequence, take these and split according to times of arange above
       #cmd_times[i] 
@@ -483,13 +520,25 @@ def write_bagfile_to_csv(directory, filename, csv_filepath, taggroup_dict, start
   #bag_name = "bag1"
   for i in range(len(split_cmd_times)):
     # Get rid of trajectory of thrust at the start (y intercept) is basically zero because it is either just sitting there or being carried
-    if actions[i][0][5] <= 5.0:
-      continue
+    """if actions[i][0][3] <=0.4:
+      print("GOT RID OF A SEQUENCE")
+      print("--------------------------------------------------------------------------------------------------------")
+      continue"""
     # Combine state and action into one long array
     traject_actions = np.array(actions[i])
+    print("trajectory shape: ", traject_actions.shape)
+    if len(traject_actions.shape) != 2:
+      continue
     actions_set = np.zeros((traject_actions.shape[0]+1, traject_actions.shape[1]))
     actions_set[:-1, :] = traject_actions
-    current_input = np.hstack((final_states[i], actions_set))#[list(final_states[i]) + actions[i]]
+    try:
+      current_input = np.hstack((final_states[i], actions_set))#[list(final_states[i]) + actions[i]]
+    except:
+      print("MISMATCH")
+      print("States: ", final_states[i].shape)
+      print("Actions: ", actions_set.shape)
+      print("--------------------------------------------------------------------")
+      continue
     print("CURRENT INPUT: ", current_input.shape)
     #current_input = [list(states_x[i]) + list(states_y[i]) + list(states_z[i]) + list(states_dx[i]) + list(states_dy[i]) + list(states_dz[i])+ actions[i]]
     # TODO: Write this line to a data file with first n=12 indices being state and the rest n=24 being action
@@ -609,7 +658,7 @@ def write_bagfile_to_csv(directory, filename, csv_filepath, taggroup_dict, start
 
 if __name__ == "__main__":
   taggroup_dict = get_taggroup_dict()
-  write_bagfile_to_csv("/home/ardenk14/labeled_drone_bags/", "tags2_right_wall.bag", "test.csv", taggroup_dict)
+  write_bagfile_to_csv("/home/ardenk14/labeled_drone_bags/", "tags3_right_wall.bag", "test.csv", taggroup_dict)
 
 
 
